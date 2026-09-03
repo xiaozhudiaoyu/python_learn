@@ -1,0 +1,28 @@
+# ---- Python 字节码 / 打包产物 ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# ---- 虚拟环境（体积大、与本机绑定，绝不提交）----
+.venv/
+venv/
+env/
+
+# ---- 编辑器 / IDE 配置 ----
+.idea/
+.vscode/
+
+# ---- 运行时生成的数据文件（属于"运行结果"，不纳入版本管理）----
+tasks.json
+tasks-*.json
+
+# ---- 个人笔记与学习文档（本地保留，不提交）----
+structure
+*.docx
+
+# ---- 操作系统杂项 ----
+Thumbs.db
+.DS_Store
