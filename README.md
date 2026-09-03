@@ -75,3 +75,4 @@ run_todo_app.py    # 顶层入口脚本（演示从包外绝对导入）
 
 - 运行时数据文件（`tasks*.json`）、虚拟环境（`.venv/`）、IDE 配置（`.idea/`）、学习文档（`*.docx`）与个人笔记（`structure`）均在 `.gitignore` 中忽略，不纳入版本管理。
 - 本仓库为学习用途，代码附带中文注释，帮助理解每一步的设计取舍。
+"# python_learn" 
