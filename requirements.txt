@@ -1,0 +1,12 @@
+# 项目依赖清单（实测环境：Python 3.14.7 + .venv）
+#
+# 安装命令：
+#     .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+#
+# 只声明直接依赖，pydantic-core、typing-extensions、annotated-types、
+# typing-inspection 等由 pip 自动解析版本，不在此写死，避免与上游锁死冲突。
+#
+# 注意：只有 "todolist pydantic.py" 需要 pydantic；
+# todolist.py 和 "todolist dataclass.py" 只用标准库，不装依赖也能运行。
+
+pydantic==2.13.5
