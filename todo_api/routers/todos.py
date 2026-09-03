@@ -3,7 +3,9 @@
 # 起步阶段不接数据库（那是第三阶段 SQLAlchemy 的事），先用一个模块级列表演示"接口层"。
 # 第三阶段接入数据库后，这个文件仍然只管"接收请求、返回响应"，数据读写会交给独立的模型/仓储层。
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
+
+from todo_api.schemas import TaskCreate, TaskOut
 
 # 定义本模块的路由：统一前缀 /api/todos；tags 会在 Swagger 文档里作为分组标题显示。
 router = APIRouter(prefix="/api/todos", tags=["todos"])
@@ -38,3 +40,20 @@ def get_todo(todo_id: int) -> dict[str, object]:   # ② 参数名对上路径�
             return todo
     # 抛 HTTPException 会得到一个带状态码的 JSON 错误响应（如 {"detail": ...}）；404 = 资源不存在。
     raise HTTPException(status_code=404, detail=f"没有找到编号为 {todo_id} 的任务")
+
+
+@router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
+def create_todo(payload: TaskCreate) -> TaskOut:
+    """演示【请求体】：客户端 POST 一段 JSON，FastAPI 用 TaskCreate 校验后交给 payload。
+
+    语法要点（对照 main.py 里那张“参数取值来源”规则表）：
+      · payload: TaskCreate —— 参数类型是 Pydantic 模型 → 从“请求体 body”取值，不是路径/查询；
+      · 校验由 TaskCreate 里的 Field 规则完成：content 为空串/超长、缺字段等，直接返回 422，不会进函数体；
+      · response_model=TaskOut —— 返回值按 TaskOut 结构序列化，顺带过滤掉多余字段；
+      · status_code=201 —— “创建成功”的标准状态码（默认是 200）。
+    """
+    # 起步用“当前条数 + 1”生成 id（本项目只有新增、没删除，能保证唯一；
+    # 第三阶段接入数据库后，主键由数据库自增，就不用手动编号了）
+    new_id = len(_FAKE_TODOS) + 1
+    _FAKE_TODOS.append({"id": new_id, "content": payload.content, "done": payload.done})
+    return TaskOut(id=new_id, content=payload.content, done=payload.done)
