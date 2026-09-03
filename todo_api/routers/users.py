@@ -12,10 +12,11 @@ _FAKE_USERS: list[dict[str, object]] = [
 
 
 @router.get("")
-def list_users(limit: int = 10) -> list[dict[str, object]]:
+def list_users(limit: int = 10) -> list[dict[str, object]]:   # ② 标量参数且不在路径 → 查询参数
     """返回用户列表，演示【查询参数】与默认值。
 
-    注意：limit 不在路径里，FastAPI 会自动把它当作查询参数（query string），
-    于是 /api/users?limit=2 会取前 2 条；不写 limit 时默认返回全部（≤10）。
+    取值规则：limit 不在路径 {..} 里、且是标量(int)，FastAPI 便按"查询参数"取值，
+    于是 /api/users?limit=2 → limit=2；默认值 =10 表示"可选"，不传就用 10。
+    想加范围校验：from fastapi import Query，写 limit: int = Query(default=10, ge=1, le=100)。
     """
-    return _FAKE_USERS[:limit]
+    return _FAKE_USERS[:limit]   # ③ 切片取前 limit 个，返回列表 → 自动序列化 JSON

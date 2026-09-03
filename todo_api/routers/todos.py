@@ -16,21 +16,25 @@ _FAKE_TODOS: list[dict[str, object]] = [
 ]
 
 
-@router.get("")
+@router.get("")                          # ① 装饰器：GET 方法 + 路径（prefix + "" = /api/todos）
 def list_todos() -> list[dict[str, object]]:
     """返回全部任务。HTTP 方法默认就是 GET，对应路径 /api/todos。"""
+    # ③ 返回值即响应体：直接 return 列表，FastAPI 自动序列化成 JSON 数组，不用手动 json.dumps
     return _FAKE_TODOS
 
 
-@router.get("/{todo_id}")
-def get_todo(todo_id: int) -> dict[str, object]:
+@router.get("/{todo_id}")                 # ① 路径里的 {todo_id} 声明了"这是个路径参数"
+def get_todo(todo_id: int) -> dict[str, object]:   # ② 参数名对上路径占位符，自动取值
     """按编号返回单个任务，演示【路径参数】：/api/todos/2。
 
-    路径里的 {todo_id} 会自动绑定到同名函数参数；声明成 int，
-    FastAPI 会帮忙做类型转换（/api/todos/abc 会被自动判为 422 校验错误）。
+    类型注解 todo_id: int 是 FastAPI 的精髓，一份注解同时干三件事：
+      1) 取值来源——名字在路径 {todo_id} 里，故按"路径参数"取值；
+      2) 运行时转换 + 校验——URL 里的 "2" 自动转成整数 2；转不了(如 /api/todos/abc)直接返回 422；
+      3) 自动生成文档——/docs 里会标注该参数的类型。
+    更强校验可写：todo_id: int = Path(..., ge=1)（需 from fastapi import Path）。
     """
     for todo in _FAKE_TODOS:
         if todo["id"] == todo_id:
             return todo
-    # 抛 HTTPException 会得到一个带状态码的 JSON 错误响应；这里用 404 表示"资源不存在"。
+    # 抛 HTTPException 会得到一个带状态码的 JSON 错误响应（如 {"detail": ...}）；404 = 资源不存在。
     raise HTTPException(status_code=404, detail=f"没有找到编号为 {todo_id} 的任务")
