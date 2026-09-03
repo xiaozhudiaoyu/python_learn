@@ -8,5 +8,11 @@
 #
 # 注意：只有 "todolist pydantic.py" 需要 pydantic；
 # todolist.py 和 "todolist dataclass.py" 只用标准库，不装依赖也能运行。
+#
+# 第二阶段（FastAPI）需要 fastapi 与 uvicorn。本机默认 PyPI 源连不上（pip 报
+# "from versions: none"），安装时请加国内镜像，例如：
+#     .\.venv\Scripts\python.exe -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 pydantic==2.13.5
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
