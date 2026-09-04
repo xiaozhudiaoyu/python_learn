@@ -1,3 +1,4 @@
+-r requirements.txt
 # 开发工具依赖（程序运行不需要，与 requirements.txt 分开维护）
 #
 # 安装：.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt

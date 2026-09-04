@@ -1,0 +1,44 @@
+# 依赖锁定清单（可复现环境快照）
+#
+# 采集时间：2026-09-04
+# 采集环境：Python 3.14.7（virtualenv 20.38.0 创建于 2026-09-02）+ .venv，Windows
+# 生成命令：.\.venv\Scripts\python.exe -m pip freeze --all
+#          （必须带 --all：默认 pip freeze 会排除 pip 自身，只得 20 项）
+#
+# 本文件为运行环境全量快照，共 21 项 = 4 个直接依赖 + 16 个传递依赖 + pip，
+# 其中含开发依赖 pyright 及其传递依赖 nodeenv，故安装本文件即得到与本机一致的完整环境。
+#
+# 用途：需要严格复现本机环境时使用（如部署、他人接手排障）：
+#     .\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 日常开发仍按 requirements.txt / requirements-dev.txt 安装，由 pip 自行解析传递依赖。
+#
+# 注意：
+# 1. freeze 输出会丢失 extras 标记，uvicorn 记录为 "uvicorn==0.52.4" 而非
+#    "uvicorn[standard]==0.52.4"；但 [standard] 带进来的 httptools、python-dotenv、
+#    PyYAML、watchfiles、websockets 均已逐项钉住，安装结果与本机一致。
+# 2. 本快照按 Windows 采集。uvloop 因 "sys_platform != 'win32'" 条件未被安装，
+#    换到 Linux/macOS 复现时包集合会多出 uvloop，届时需重新采集。
+# 3. starlette 被 fastapi 以 "starlette>=0.46.0"（无上界）解析到了 1.6.0，
+#    这正是本文件要固化的主要原因——不锁版本则重装时可能漂移到不同主版本。
+
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.0
+click==8.5.0
+fastapi==0.141.1
+h11==0.16.0
+httptools==0.8.0
+idna==3.19
+nodeenv==1.10.0
+pip==26.0.1
+pydantic==2.13.5
+pydantic_core==2.46.5
+pyright==1.1.411
+python-dotenv==1.2.3
+PyYAML==6.0.3
+starlette==1.6.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.52.4
+watchfiles==1.2.0
+websockets==17.1
