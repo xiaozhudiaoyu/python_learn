@@ -26,3 +26,5 @@ structure
 # ---- 操作系统杂项 ----
 Thumbs.db
 .DS_Store
+
+process/

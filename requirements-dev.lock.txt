@@ -1,0 +1,44 @@
+# 开发工具链依赖锁定清单（不含运行时包）
+#
+# 采集时间：2026-09-08
+# 采集环境：Python 3.14.7（virtualenv 20.38.0 创建于 2026-09-02）+ .venv，Windows
+# 生成命令：.\.venv\Scripts\python.exe -m pip freeze --all
+#          再剥除 requirements.lock.txt 已收录的 19 个运行条目，余下 17 项即本文件
+#          （两份互斥，合计 36 项 = 本机 .venv 实测全量）
+#
+# 本文件收录两条彼此独立的开发工具链：
+#   1) pyright 1.1.411   —— 静态类型检查器，已在 requirements-dev.txt 中声明
+#      └─ nodeenv 1.10.0
+#   2) pipdeptree 4.2.3  —— 依赖树查看工具，2026-09-07 15:06 临时安装，尚未写入任何声明文件
+#      └─ nab-index / nab-project 及其下游共 14 项
+#
+# 用途：需要复刻本机完整开发环境时，先装运行时再装本文件：
+#     .\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+#     .\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 只想跑程序时不需要安装本文件。
+#
+# 注意：
+# 1. 本文件是"环境现状快照"，不是"声明"。其中 pipdeptree 链在 requirements-dev.txt
+#    里没有对应条目，属"已装但未登记"状态（变更缘由与影响见 DEPENDENCIES.md 第二节）。
+#    若今后不再使用该工具，卸载后请重新采集本文件。
+# 2. 条目顺序沿用 pip freeze 原生输出，未二次排序，便于与 freeze 结果直接 diff 比对。
+# 3. build / installer / packaging / tomli 等同时也是常见打包工具依赖，此处它们
+#    确实是被 nab-project 拉进来的（元数据 Required-by 可证），不是独立安装的。
+
+build==1.6.0
+colorama==0.4.6
+installer==1.0.1
+nab-index==0.0.17
+nab-markersets==0.0.17
+nab-project==0.0.17
+nab-provider==0.0.17
+nab-resolver==0.0.17
+nodeenv==1.10.0
+packaging==26.3
+pipdeptree==4.2.3
+pyproject_hooks==1.2.0
+pyright==1.1.411
+tomli==2.4.1
+tomli_w==1.2.0
+truststore==0.10.4
+urllib3==2.7.0
