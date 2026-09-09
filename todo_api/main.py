@@ -38,7 +38,17 @@
 from fastapi import Depends, FastAPI
 
 from todo_api.deps import request_timer
-from todo_api.routers import depends_demo, todos, users
+from todo_api.exceptions import register_exception_handlers
+from todo_api.routers import depends_demo, errors, todos, users
+
+# OpenAPI 文档元信息（Day 12）：给文档里的每个分组配一句"人话简介"。
+# 注意 name 必须和各 router 里写的 tags 一字不差（含中间点 ·），对不上就不会显示说明。
+_TAGS_METADATA = [
+    {"name": "todos", "description": "待办清单主业务接口（Day 9~12），已补齐增删改查与完整错误响应。"},
+    {"name": "users", "description": "用户接口（Day 9 查询参数示例，第三阶段接数据库后会大改）。"},
+    {"name": "Day11 · Depends 依赖注入", "description": "依赖树 / yield 收尾 / 登录态链 / 依赖覆盖的演示集合。"},
+    {"name": "Day12 · 异常与错误响应", "description": "故意出错的教学样本：400/401/404/405/409/422/500 一次看全。"},
+]
 
 # 创建应用实例。命令里的 "todo_api.main:app" 指的就是这个名为 app 的变量。
 # Day 11 新增 dependencies=[...]：【应用级依赖】，对全站所有接口统一生效；
@@ -47,14 +57,26 @@ app = FastAPI(
     title="Todo API（第一阶段起步）",
     version="0.1.0",
     dependencies=[Depends(request_timer)],
+    description="学习用项目。错误响应统一为 {code, message, details} 结构，见各接口的 Responses 区。",
+    openapi_tags=_TAGS_METADATA,
 )
+
+# Day 12：注册全站错误处理（必须在 app 创建之后、路由生效之前调用）。
+# 四类异常（校验错 / HTTPException / 领域异常 / 其他 bug）全部在 exceptions.py 里集中定义。
+register_exception_handlers(app)
+
+# 三个文档地址都是免费生成的（Day 12 "用 OpenAPI 文档验证接口"就用它们）：
+#   /docs         Swagger UI：能直接发请求，本项目主要用它
+#   /redoc        ReDoc：只读版，左侧目录右侧说明，通读长文档更舒服
+#   /openapi.json 机器可读的接口描述原文（第四阶段前端可用它自动生成 TS 类型）
 # app = FastAPI(title="...", version="0.1.0", docs_url="/api-docs")   # 文档地址变 http://127.0.0.1:8000/api-docs
 # docs_url=None 可直接关掉文档
 
-# 把子路由"挂"到主应用上；它们各自带 /api/todos、/api/users、/api/depends 前缀。
+# 把子路由"挂"到主应用上；它们各自带 /api/todos、/api/users、/api/depends、/api/errors 前缀。
 app.include_router(todos.router)
 app.include_router(users.router)
 app.include_router(depends_demo.router)   # Day 11：Depends 演示接口
+app.include_router(errors.router)         # Day 12：错误场景集锦
 
 
 @app.get("/")

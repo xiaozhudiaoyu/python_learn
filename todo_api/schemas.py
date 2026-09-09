@@ -7,7 +7,7 @@
 # 与你第一阶段写的 "todolist pydantic.py" 是同一套 BaseModel 语法，
 # 区别只是：这次由 FastAPI 在【运行时】自动调用它来校验请求 / 序列化响应。
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TaskCreate(BaseModel):
@@ -30,3 +30,45 @@ class TaskOut(BaseModel):
     id: int
     content: str
     done: bool
+
+
+# ── Day 12 新增：PATCH 的请求体 + 统一错误响应结构 ─────────────────────
+class TaskUpdate(BaseModel):
+    """PATCH /api/todos/{id} 的【请求体】：两个字段都可选，但至少要给一个。
+
+    为什么用 None 而不用 False 当 done 的默认值？
+      PATCH 是"部分更新"，必须分清"没传"和"传了 false"：
+      默认 None = 没传 → 不改；传 false = 明确要改成未完成。
+      靠 payload.model_dump(exclude_unset=True) 才能拿到"客户端真正传了哪些字段"。
+
+    extra="forbid"：客户端多传一个拼错名字的字段（如 contnet）直接 422，
+      不然是被静默丢弃的——这类"默默吃掉错误"的坑比报错更难查。
+      （POST 的 TaskCreate 保持原样没动，等你想统一时再一起改。）
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    content: str | None = Field(default=None, min_length=1, max_length=200, description="新的任务内容")
+    done: bool | None = Field(default=None, description="新的完成状态")
+
+
+class FieldErrorOut(BaseModel):
+    """【字段级】校验明细，只在校验类错误（422 / 400）里出现。"""
+
+    field: str = Field(description="哪个位置、哪个字段出的问题，如 query.limit、body.content")
+    type: str = Field(description="机器可读的错误类型，如 missing、string_too_short")
+    message: str = Field(description="人话说明")
+
+
+class ErrorOut(BaseModel):
+    """统一错误响应结构：所有非 2xx 的 JSON body 都长这个样。
+
+    为什么要统一？前端只写一段处理逻辑就能应对全部错误：
+      按 code 分支处理（比如 code == "todo_conflict" 时提示"已存在"），
+      按 message 兜底展示，按 details 把错误标到对应输入框上。
+    路由上写 responses={404: {"model": ErrorOut}} 就能在 Swagger 里看到它。
+    """
+
+    code: str = Field(description="稳定的错误码，给程序判断用，别拿它当文案")
+    message: str = Field(description="给人看的说明，可能随时改，不要用它做逻辑判断")
+    details: list[FieldErrorOut] = Field(default_factory=list, description="字段级明细；没有则为空列表")
