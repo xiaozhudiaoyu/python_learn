@@ -1,0 +1,164 @@
+
+第一阶段：Python基础 + Git（约1周）
+
+Day 1：环境 + 变量 + 数据类型 + 流程控制
+
+安装 Python 3.11+，配置虚拟环境（venv / uv / conda 选一个）
+变量、int/float/str/bool、list/dict/set/tuple
+if/else、for/while
+动手：写一个命令行小工具（比如待办事项CLI，支持增删查），用Git做第一次提交
+
+Day 2：函数 + 常用集合操作
+
+函数定义、参数（位置/关键字/默认/可变）、返回值
+list推导式、dict操作、常见内置函数（map/filter/sorted）
+动手：把Day1的CLI重构，把逻辑拆成函数，再提交一次
+
+Day 3：类 + 模块 + 包 + 项目结构
+
+class、init、实例方法/类方法/静态方法
+import机制、init.py、项目目录组织
+动手：把CLI里的数据模型改成class，体会面向对象组织代码的方式
+
+Day 4：类型标注 + typing + 异常处理
+
+类型标注语法（变量、函数参数/返回值）
+typing.List、Optional、Union、Dict 等
+try/except/finally、自定义异常
+动手：给前面写的代码全部加上类型标注，跑一下Pyright或mypy
+
+Day 5：JSON + 文件读写 + async/await入门
+
+json.loads/dumps、读写文件（with open）
+async/await基本概念、asyncio.run、简单异步函数
+动手：让CLI支持从JSON文件持久化数据（不用数据库，先感受IO），用async写个模拟异步任务
+
+Day 6：Git实战
+
+分支创建/切换/合并、解决冲突
+.gitignore配置（加Python相关规则）
+写一份像样的README
+动手：把前5天的代码整理到一个Git仓库，打好tag，写清楚提交记录
+
+Day 7：弹性缓冲
+
+前面哪天没吃透就补哪天，或者提前预习HTTP基础
+第二阶段：HTTP + FastAPI + Pydantic（约1周）
+
+Day 8：HTTP基础
+
+请求/响应结构、方法（GET/POST/PUT/DELETE）、状态码
+路径参数、查询参数、请求头、请求体、JSON
+REST风格、CORS、同源策略
+动手：用浏览器/Postman/curl手动发请求，观察请求和响应
+
+Day 9：FastAPI起步 + APIRouter
+
+创建FastAPI应用、启动（uvicorn）
+APIRouter划分模块
+动手：搭一个项目骨架，至少有2个router（比如/api/todos、/api/users），能跑起来
+
+Day 10：Pydantic模型 + 请求/响应校验
+
+BaseModel定义、字段类型、默认值、约束（min_length、ge等）
+请求模型 vs 响应模型
+动手：给todo接口定义完整的请求和响应模型，试各种非法输入看校验报错
+
+Day 11：参数 + 依赖注入 + 同步异步接口
+
+路径参数、查询参数、请求体混用
+Depends依赖注入基础
+同步vs异步接口写法
+动手：写一个带依赖注入的接口（比如从请求头取user_id），同时有同步和异步两种实现
+
+Day 12：异常处理 + 状态码 + OpenAPI文档
+
+HTTPException自定义错误响应
+状态码语义化返回
+Swagger文档验证接口
+动手：给所有接口加上合理的错误处理，在Swagger里完整跑一遍
+
+Day 13：综合练习
+
+把前5天的内容串起来，做一个纯后端的TODO API（数据先存内存list）
+全部接口用Pydantic校验，Swagger可完整测试
+Git提交
+
+Day 14：弹性缓冲
+
+补薄弱点，或提前看SQLAlchemy文档热热身
+第三阶段：SQLAlchemy ORM + Alembic + 数据库（约1周）
+
+Day 15：SQLAlchemy 2 基础
+
+数据库连接、engine、session
+ORM模型定义（字段、主键、约束）
+动手：定义2-3张表（比如Todo、User），能创建表结构
+
+Day 16：CRUD + Session生命周期
+
+新增、查询（单条/列表/条件过滤）、修改、删除
+Session的创建/提交/回滚/关闭
+事务边界理解
+动手：写一组DAO函数，覆盖全部CRUD操作
+
+Day 17：关联关系 + 分页
+
+ForeignKey、relationship、一对多/多对多
+limit/offset分页
+动手：给Todo加User关联，实现分页查询接口
+
+Day 18：Alembic迁移
+
+初始化Alembic、创建迁移脚本、执行迁移
+修改模型后生成新迁移
+动手：从零初始化迁移，然后故意改一次模型再生成迁移，理解整个流程
+
+Day 19：接口模型 vs ORM模型分离
+
+Schema（Pydantic）和Model（SQLAlchemy）的职责区分
+数据转换（ORM → dict → Pydantic）
+动手：重构之前的TODO API，接入真实数据库，前后模型严格分离
+
+Day 20：综合练习
+
+把内存版TODO API完整替换为数据库版
+至少实现新增、查询、修改、删除四类操作
+Git提交
+
+Day 21：弹性缓冲
+
+数据库基础补课（SQL语句手写、索引、事务），或补前面薄弱点
+第四阶段：前后端联调 + 综合实践（约1~2周）
+
+Day 22-23：前端项目搭建 + 基础页面
+
+Vite + Vue 3 + TypeScript脚手架
+Vue Router配置路由
+搭一个TODO列表页 + 新增/编辑表单页
+先写死数据，不接后端
+
+Day 24-25：TanStack Query + Zod接入
+
+用TanStack Query管理API调用（loading/success/error状态）
+Zod定义前端数据结构，与后端Pydantic模型保持一致
+动手：完成列表查询 + 新增 两个接口的联调
+
+Day 26-27：完整联调
+
+修改、删除接口联调
+空数据状态、失败状态、错误提示
+表单校验（Zod）+ 提交
+浏览器DevTools + 服务端日志排查问题
+
+Day 28-30：综合实践项目收尾
+
+选一个完整小项目（等公司定选题，或者自己先搞个TODO增强版）
+全部代码Git提交，写好README
+整理AI工具使用记录（文档要求的&quot;简短实践说明&quot;）
+本地可运行验证一遍
+几个执行层面的提醒
+每天结束前必须Git commit，提交信息写清楚做了什么，这是验收标准之一
+AI工具从Day 1就开始用，别等最后才&quot;补&quot;这部分。用Cursor或Copilot辅助写代码，但每生成一段都要自己跑一遍、读懂、能讲清楚
+Pydantic和TypeScript的Zod可以对照着学，两边概念几乎一一对应，你前端背景在这里是优势
+遇到卡点别死磕超过2小时，查文档、问AI、问同事，脱产学习节奏紧，时间要花在刀刃上
