@@ -44,7 +44,7 @@ from todo_api.routers import depends_demo, errors, todos, users
 # OpenAPI 文档元信息（Day 12）：给文档里的每个分组配一句"人话简介"。
 # 注意 name 必须和各 router 里写的 tags 一字不差（含中间点 ·），对不上就不会显示说明。
 _TAGS_METADATA = [
-    {"name": "todos", "description": "待办清单主业务接口（Day 9~12），已补齐增删改查与完整错误响应。"},
+    {"name": "todos", "description": "待办清单主业务接口（Day 9~13），增删改查 + 查询过滤 + 数据重置，完整错误响应。"},
     {"name": "users", "description": "用户接口（Day 9 查询参数示例，第三阶段接数据库后会大改）。"},
     {"name": "Day11 · Depends 依赖注入", "description": "依赖树 / yield 收尾 / 登录态链 / 依赖覆盖的演示集合。"},
     {"name": "Day12 · 异常与错误响应", "description": "故意出错的教学样本：400/401/404/405/409/422/500 一次看全。"},

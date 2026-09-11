@@ -11,19 +11,31 @@ from todo_api.schemas import ErrorOut, TaskCreate, TaskOut, TaskUpdate
 # 定义本模块的路由：统一前缀 /api/todos；tags 会在 Swagger 文档里作为分组标题显示。
 router = APIRouter(prefix="/api/todos", tags=["todos"])
 
-# 起步用的内存数据（dict 列表即可，FastAPI 会自动序列化成 JSON）
-_FAKE_TODOS: list[dict[str, object]] = [
+# ── Day 13：把"初始数据"和"运行时数据"分开，重置接口才能恢复原始状态 ──────
+_INITIAL_TODOS: list[dict[str, object]] = [
     {"id": 1, "content": "学习 HTTP 基础", "done": True},
     {"id": 2, "content": "跑通 FastAPI 起步", "done": False},
     {"id": 3, "content": "预习 SQLAlchemy", "done": False},
 ]
 
+# 运行时数据：启动时从初始数据拷贝一份，所有增删改都在这份上操作。
+_FAKE_TODOS: list[dict[str, object]] = [todo.copy() for todo in _INITIAL_TODOS]
+
 
 @router.get("")                          # ① 装饰器：GET 方法 + 路径（prefix + "" = /api/todos）
-def list_todos() -> list[dict[str, object]]:
-    """返回全部任务。HTTP 方法默认就是 GET，对应路径 /api/todos。"""
-    # ③ 返回值即响应体：直接 return 列表，FastAPI 自动序列化成 JSON 数组，不用手动 json.dumps
-    return _FAKE_TODOS
+def list_todos(done: bool | None = None) -> list[dict[str, object]]:
+    """返回全部任务。HTTP 方法默认就是 GET，对应路径 /api/todos。
+
+    Day 13 新增：可选查询参数 done，按完成状态过滤。
+      · 不传        → 返回全部（和之前一样）
+      · ?done=true  → 只返回已完成的
+      · ?done=false → 只返回未完成的
+    取值规则：done 不在路径里、且是标量(bool | None)，FastAPI 按【查询参数】取值，
+    自动把 "true"/"false" 转成 bool；FastAPI 的 bool 还接受 yes/no/on/off/1/0。
+    """
+    if done is None:
+        return _FAKE_TODOS
+    return [todo for todo in _FAKE_TODOS if todo["done"] == done]
 
 
 def _find_todo(todo_id: int) -> dict[str, object]:
@@ -37,6 +49,24 @@ def _find_todo(todo_id: int) -> dict[str, object]:
         if todo["id"] == todo_id:
             return todo
     raise TodoNotFoundError(todo_id)
+
+
+# ── Day 13：数据重置（固定路径放在 /{todo_id} 之前，避免被路径参数吞掉）────
+@router.post(
+    "/reset",
+    response_model=list[TaskOut],
+    status_code=status.HTTP_200_OK,
+)
+def reset_todos() -> list[TaskOut]:
+    """把内存数据恢复成初始状态，方便反复测试。
+
+    为什么用 POST 而不是 GET？
+      重置会修改服务器状态（幂等但非安全），GET 语义上不该有副作用；
+      POST 表示"执行一个动作"，符合 REST 对"非 CRUD 操作"的常见处理方式。
+    """
+    _FAKE_TODOS.clear()
+    _FAKE_TODOS.extend(todo.copy() for todo in _INITIAL_TODOS)
+    return [TaskOut.model_validate(todo) for todo in _FAKE_TODOS]
 
 
 @router.get(
