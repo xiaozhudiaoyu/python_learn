@@ -19,6 +19,11 @@ env/
 tasks.json
 tasks-*.json
 
+# ---- 本地数据库连接配置（含账号口令，绝不提交）----
+# 只提交模板 day15_orm/db_config_local_example.py，真实值写在被忽略的 db_config_local.py
+# （文件名用下划线不用点：db_config.local.py 含点，Python 无法当普通模块 import，Pyright 也检不了）
+day15_orm/db_config_local.py
+
 # ---- 个人笔记与学习文档（本地保留，不提交）----
 structure
 *.docx
