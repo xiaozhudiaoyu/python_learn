@@ -16,8 +16,8 @@ env/
 .vscode/
 
 # ---- 运行时生成的数据文件（属于"运行结果"，不纳入版本管理）----
-tasks.json
-tasks-*.json
+# tasks.json
+# tasks-*.json
 
 # ---- 本地数据库连接配置（含账号口令，绝不提交）----
 # 只提交模板 day15_orm/db_config_local_example.py，真实值写在被忽略的 db_config_local.py
@@ -25,11 +25,12 @@ tasks-*.json
 day15_orm/db_config_local.py
 
 # ---- 个人笔记与学习文档（本地保留，不提交）----
-structure
-*.docx
+# structure
+# *.docx
 
 # ---- 操作系统杂项 ----
 Thumbs.db
 .DS_Store
 
+# ---- 运行时生成的进程文件 ----
 process/

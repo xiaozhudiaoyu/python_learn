@@ -1,0 +1,11 @@
+app/
+├── api/
+│   ├── v1/
+│   │   ├── users.py        # 用户 CRUD
+│   │   ├── orders.py       # 订单 CRUD
+│   │   └── auth.py         # 登录/登出（动作型）
+│   └── deps.py             # 公共依赖（鉴权、分页等）
+├── models/                 # 数据库模型
+├── schemas/                # Pydantic 模型
+├── services/               # 业务逻辑层
+└── main.py

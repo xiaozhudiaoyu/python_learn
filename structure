@@ -1,0 +1,38 @@
+e:/python_learn/
+├── todo_app/                 ← 【包】= 带 __init__.py 的目录
+│   ├── __init__.py           ← 包入口：标识"这是包" + 把 Task/TodoList 提上来对外暴露
+│   ├── models.py             ← 【模块】数据模型 Task
+│   ├── storage.py            ← 【模块】JSON 持久化（相对导入 from .models import Task）
+│   └── service.py            ← 【模块】业务逻辑 TodoList（组合 models + storage）
+├── run_todo_app.py           ← 顶层入口：演示从外部绝对导入 from todo_app import TodoList
+└── tasks-app.json            ← 运行时生成（包版本独立数据文件）
+
+
+e:\python_learn\
+├── .idea\                      ← PyCharm/Qoder 的工程配置（编辑器生成）
+├── .venv\                      ← 本项目的 Python 虚拟环境（virtualenv 生成）
+├── __pycache__\                ← Python 字节码缓存（自动反复生成）
+├── hello.py            22B     ← 你最早写的入门示例
+├── tasks.json          52B     ← todolist 的数据文件（当前是旧字符串格式，我按原样恢复的）
+├── todolist.py       6873B     ← 主程序（class 版，当前生效的这份）
+├── todolist class.py 6873B     ← class 版的复制快照（与上面完全相同）
+└── todolist 提取函数.py 3944B  ← 函数版的复制快照（重构前的旧实现）
+
+
+.venv 内部（虚拟环境）
+由 pyvenv.cfg 可查到确切来源：用 virtualenv 20.38.0 创建，基于本机 D:\Program Files\Python\Python314（CPython 3.14.7），include-system-site-packages = false（不共享全局包，完全隔离）。目前里面只装了 pip 26.0.1，没有任何第三方库——这也符合之前没给你装过依赖的事实。
+Scripts\` —python.exe、pip.exe和activate.ps1/.bat激活脚本。我之前所有验证都用..venv\Scripts\python.exe显式调用，就是为了保证跑的是 3.14.7 这个环境
+Lib\site-packages\` — 第三方包的安装位置（现在是空的，只有 pip 自己）
+Include\` — C 扩展编译用的头文件，纯 Python 项目基本不会碰
+CACHEDIR.TAG / .gitignore — 给备份工具和内容库工具的标记，以及「整个 venv 都不要提交」的兜底
+
+
+.idea 内部（工程配置）
+文件	作用（按实际内容）
+---	---
+misc.xml	把 E:\python_learn\.venv 注册为本项目的 Python SDK（解释器绑定就在这）
+python_learn.iml	模块定义，其中 <excludeFolder> 把 .venv 从索引/检索范围排除——注意这是让编辑器别索引，不是 git 忽略
+modules.xml	声明本工程的模块清单，指向上面的 .iml
+workspace.xml	纯本地状态：窗口布局、未保存的编辑、运行历史。.idea\.gitignore 里已把它列为忽略项
+inspectionProfiles\profiles_settings.xml	代码检查（Inspection）配置档案，默认级别
+.gitignore	IDE 自带的忽略清单（workspace.xml、shelf/、httpRequests/ 等），只作用于 .idea 目录内部

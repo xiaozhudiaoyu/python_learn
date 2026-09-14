@@ -1,0 +1,7 @@
+.\.venv\Scripts\python.exe -m uvicorn todo_api.main:app --reload --port 8001           # 换成 http://127.0.0.1:8001
+.\.venv\Scripts\python.exe -m uvicorn todo_api.main:app --reload --host 0.0.0.0        # 监听所有网卡，局域网可访问
+
+一句话：
+换端口用 --port，
+换文档路径改 FastAPI(docs_url=...)，
+换接口路径改 APIRouter(prefix=...)。
