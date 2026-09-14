@@ -24,8 +24,9 @@
 # 4. 拆分依据是“哪些包被运行时代码链引用”，与声明文件无关。2026-09-11 两项变更：
 #    ① pipdeptree 迁往系统 Python，其 14 个传递依赖已从 .venv 卸载（见 DEPENDENCIES.md 第五节）；
 #    ② 新增 SQLAlchemy 链 3 项 greenlet / PyMySQL / SQLAlchemy（见 DEPENDENCIES.md 第六节）。
-# 5. SQLAlchemy 与 PyMySQL 已被 SQLAlchemy.py 实际 import，但截至 2026-09-11 仍未写入
-#    requirements.txt 声明，属“已装、已锁、未声明”状态；该文件尚未纳入 git 版本控制。
+# 5. SQLAlchemy 与 PyMySQL 已被 SQLAlchemy.py 实际 import；2026-09-14 按规则 2.6 已补写入
+#    requirements.txt 声明（SQLAlchemy==2.0.52、PyMySQL==1.2.0），“已装、已锁、未声明”漂移已消除；
+#    该文件尚未纳入 git 版本控制。
 
 annotated-doc==0.0.5
 annotated-types==0.8.0

@@ -12,7 +12,13 @@
 # 第二阶段（FastAPI）需要 fastapi 与 uvicorn。本机默认 PyPI 源连不上（pip 报
 # "from versions: none"），安装时请加国内镜像，例如：
 #     .\.venv\Scripts\python.exe -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+#
+# 第三阶段（SQLAlchemy ORM，Day 15）需要 SQLAlchemy 与 PyMySQL；
+# greenlet 是 SQLAlchemy 的传递依赖（Requires: greenlet>=1），由 pip 自行解析，不写死。
+# 2026-09-14 按规则 2.6 补齐：与 requirements.lock.txt 第 42/45 行、DEPENDENCIES.md 第六节保持一致。
 
 pydantic==2.13.5
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
+SQLAlchemy==2.0.52
+PyMySQL==1.2.0

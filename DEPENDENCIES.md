@@ -18,6 +18,7 @@
 | 2026-09-08 | 依赖盘点：本次发现 9/7 未登记新增；锁文件拆为运行时/开发两份；建立本台账 | 36（持平） | 本次操作，`pip freeze --all` 逐项比对 |
 | 2026-09-11 10:08:10–10:08:51 | **第五批：SQLAlchemy + PyMySQL + greenlet，未登记**（本次盘点发现） | 36 → **38** | `dist-info` 时间戳；`SQLAlchemy.py` 第 1–2 行实际 import |
 | 2026-09-11 | **pipdeptree 本体已迁往系统 Python，其 14 个传递依赖从 `.venv` 卸载**；两份锁文件重采 | 38 → **24** | `pip freeze --all` 卸载前后比对；`pipdeptree -r -p` 反查；`pip check` |
+| 2026-09-14 | 按规则 2.6 补齐声明缺口：`requirements.txt` 追加 `SQLAlchemy==2.0.52`、`PyMySQL==1.2.0` 两行；`requirements.lock.txt` 第 5 条注释同步；本文件第六节“待办：声明缺口”改为“声明缺口补齐记录” | 24（持平，仅声明层变更，未动 `.venv`） | `pip show SQLAlchemy PyMySQL` 实测输出（SQLAlchemy 2.0.52 / PyMySQL 1.2.0）；`requirements.lock.txt` 第 42/45 行；本文件第六节 `dist-info` 时间戳表格 |
 
 ## 二、2026-09-07 新增批次（15 项，全部来自一次 `pip install pipdeptree`）
 
@@ -171,23 +172,47 @@ Remove-Item -Recurse -Force "e:\python_learn\.venv\Lib\site-packages\~uild-1.6.0
 
 ### 定性结论
 
-**属项目需要的运行时依赖，不是垃圾包，但尚未登记到声明文件。**
+**属项目需要的运行时依赖，不是垃圾包；已于 2026-09-14 登记到 `requirements.txt`（参见本节末尾“声明缺口补齐记录”）。**
 
 - 使用证据：`SQLAlchemy.py` 第 1–2 行 `import sqlalchemy` / `import pymysql`，第 4–5 行打印二者版本号。
 - 来源佐证：`_学习指南.txt` 第 91、93 行标注“第二阶段：SQLAlchemy ORM + Alembic + 数据库”“Day 15：SQLAlchemy 2 入门”，即学习计划下一阶段的预备安装。
 - `greenlet` 非独立安装，是 `SQLAlchemy` 的传递依赖（`Requires: greenlet>=1`，`pipdeptree -r -p greenlet` 可证）。
 - 依赖树显示 `PyMySQL` 为顶层根节点，无任何包 `Requires` 它 —— 符合预期：它是数据库驱动，由 SQLAlchemy 在运行时按连接串动态加载，不写在元数据依赖里。
 
-### 待办：声明缺口
+### 声明缺口补齐记录（2026-09-14）
 
-截至 2026-09-11，`requirements.txt` 仍只声明 `pydantic` / `fastapi` / `uvicorn[standard]` 三项，**SQLAlchemy 与 PyMySQL 属“已装、已锁、未声明”**，与第二节 pipdeptree 曾经的漂移同类。另 `SQLAlchemy.py` 的 git 状态为 `??`（untracked），尚无提交记录。
-
-补齐方式（未在本次授权范围内执行，待确认）：在 `requirements.txt` 追加两行，`greenlet` 作为传递依赖不写死：
+2026-09-11 盘点时，`requirements.txt` 仍只声明 `pydantic` / `fastapi` / `uvicorn[standard]` 三项，**SQLAlchemy 与 PyMySQL 属“已装、已锁、未声明”**，与第二节 pipdeptree 曾经的漂移同类。本次按规则 2.6 补齐声明，`greenlet` 作为传递依赖不写死：
 
 ```
 SQLAlchemy==2.0.52
 PyMySQL==1.2.0
 ```
+
+#### 版本核对证据（三处一致）
+
+| 来源 | SQLAlchemy | PyMySQL |
+|---|---|---|
+| `.venv` 实测：`.\.venv\Scripts\python.exe -m pip show SQLAlchemy PyMySQL`（2026-09-14） | 2.0.52 | **1.2.0** |
+| `requirements.lock.txt` 第 42 / 45 行 | 2.0.52 | **1.2.0** |
+| 本节顶部表格（`dist-info` 创建时间戳） | 2.0.52（10:08:13） | **1.2.0**（10:08:51） |
+
+> 变更记录：本次任务发起时需求描述中的 `PyMySQL==1.1.2` 与上述三处证据均不一致，按规则 2.1 / 3.4 已向用户澄清，用户确认“以锁文件为准”后再写入，无推断成分。
+
+#### 同步更新位置
+
+| 文件 | 变更 |
+|---|---|
+| `requirements.txt` | 追加两行直接依赖声明；同时补一段“第三阶段（SQLAlchemy ORM）”注释，与现有“第二阶段（FastAPI）”注释风格对齐 |
+| `requirements.lock.txt` | 仅第 5 条注释：将“截至 2026-09-11 仍未写入 requirements.txt 声明”改为“2026-09-14 已补写入”；锁定条目本体未动 |
+| `DEPENDENCIES.md` 第一节 | 时间线总览追加 2026-09-14 记录 |
+| `DEPENDENCIES.md` 第六节 | 定性结论由“尚未登记到声明文件”改为“已于 2026-09-14 登记”；本小节由“待办：声明缺口”重写为“声明缺口补齐记录” |
+
+#### 本次未变更项（明确划线）
+
+- `.venv` 实装版本未动——本次仅为声明层补齐，不涉及 `pip install` / `pip uninstall`。
+- `requirements.lock.txt` 与 `requirements-dev.lock.txt` 的锁定条目本体未动，24 项总数持平。
+- `requirements-dev.txt` 未动（SQLAlchemy 链属运行时，与开发工具链无关）。
+- `SQLAlchemy.py` 的 git untracked 状态与本任务无关，本次不处理。
 
 ## 七、锁文件重采结果（2026-09-11）
 
