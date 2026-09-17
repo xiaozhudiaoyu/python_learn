@@ -18,12 +18,14 @@ from .database import (
     masked_url,
     session_scope,
 )
-from .models import Base, Todo, User
+from .models import Base, Tag, Todo, User, todo_tags
 
 __all__ = [
     "Base",
     "User",
     "Todo",
+    "Tag",
+    "todo_tags",
     "get_engine",
     "get_session_factory",
     "session_scope",
