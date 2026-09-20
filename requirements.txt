@@ -16,9 +16,14 @@
 # 第三阶段（SQLAlchemy ORM，Day 15）需要 SQLAlchemy 与 PyMySQL；
 # greenlet 是 SQLAlchemy 的传递依赖（Requires: greenlet>=1），由 pip 自行解析，不写死。
 # 2026-09-14 按规则 2.6 补齐：与 requirements.lock.txt 第 42/45 行、DEPENDENCIES.md 第六节保持一致。
+#
+# 第四阶段（数据库迁移，Day 18）需要 Alembic；Mako、MarkupSafe 是 Alembic 的传递依赖
+# （alembic Requires: Mako, SQLAlchemy, typing-extensions；Mako Requires: MarkupSafe），
+# 由 pip 自行解析，不写死。2026-09-18 按规则 2.6 登记：见 DEPENDENCIES.md 第八节。
 
 pydantic==2.13.5
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
 SQLAlchemy==2.0.52
 PyMySQL==1.2.0
+alembic==1.20.0

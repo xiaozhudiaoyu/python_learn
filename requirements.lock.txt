@@ -5,9 +5,9 @@
 # 生成命令：.\.venv\Scripts\python.exe -m pip freeze --all（再剥除开发工具链条目）
 #          （必须带 --all：默认 pip freeze 会排除 pip 自身）
 #
-# 本文件只锁运行时，共 22 项 = 5 个直接依赖 + 16 个传递依赖 + pip。
+# 本文件只锁运行时，共 25 项 = 6 个直接依赖 + 18 个传递依赖 + pip。
 # 开发工具链（pyright 链 2 项）另见 requirements-dev.lock.txt，
-# 两份合计 24 项，与本机 .venv 实测逐一一致。
+# 两份合计 27 项，与本机 .venv 实测逐一一致。
 #
 # 用途：只需跑程序（部署、其他人接手排障）时单独使用本文件：
 #     .\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
@@ -27,7 +27,12 @@
 # 5. SQLAlchemy 与 PyMySQL 已被 SQLAlchemy.py 实际 import；2026-09-14 按规则 2.6 已补写入
 #    requirements.txt 声明（SQLAlchemy==2.0.52、PyMySQL==1.2.0），“已装、已锁、未声明”漂移已消除；
 #    该文件尚未纳入 git 版本控制。
+# 6. 2026-09-18 新增 Alembic 链 3 项 alembic / Mako / MarkupSafe（见 DEPENDENCIES.md 第八节）。
+#    alembic 是数据库迁移工具，不被应用运行时代码链 import，但按学习计划属后端技术栈的
+#    一等直接依赖（部署时执行迁移），故与运行时同列入 requirements.txt / 本锁文件，
+#    而非归到开发工具链。Mako / MarkupSafe 为其传递依赖。
 
+alembic==1.20.0
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.0
@@ -37,6 +42,8 @@ greenlet==3.5.5
 h11==0.16.0
 httptools==0.8.0
 idna==3.19
+Mako==1.4.1
+MarkupSafe==3.0.3
 pip==26.0.1
 pydantic==2.13.5
 pydantic_core==2.46.5

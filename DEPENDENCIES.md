@@ -19,6 +19,7 @@
 | 2026-09-11 10:08:10–10:08:51 | **第五批：SQLAlchemy + PyMySQL + greenlet，未登记**（本次盘点发现） | 36 → **38** | `dist-info` 时间戳；`SQLAlchemy.py` 第 1–2 行实际 import |
 | 2026-09-11 | **pipdeptree 本体已迁往系统 Python，其 14 个传递依赖从 `.venv` 卸载**；两份锁文件重采 | 38 → **24** | `pip freeze --all` 卸载前后比对；`pipdeptree -r -p` 反查；`pip check` |
 | 2026-09-14 | 按规则 2.6 补齐声明缺口：`requirements.txt` 追加 `SQLAlchemy==2.0.52`、`PyMySQL==1.2.0` 两行；`requirements.lock.txt` 第 5 条注释同步；本文件第六节“待办：声明缺口”改为“声明缺口补齐记录” | 24（持平，仅声明层变更，未动 `.venv`） | `pip show SQLAlchemy PyMySQL` 实测输出（SQLAlchemy 2.0.52 / PyMySQL 1.2.0）；`requirements.lock.txt` 第 42/45 行；本文件第六节 `dist-info` 时间戳表格 |
+| 2026-09-18 09:25:32–09:25:33 | **第八批：Alembic 链（Day 18 迁移）**：`pip install alembic -i 清华镜像`，新增 alembic + Mako + MarkupSafe；同步写入 `requirements.txt`、`requirements.lock.txt` | 24 → **27** | `dist-info` 创建时间戳；`pip show alembic`（Requires: Mako, SQLAlchemy, typing-extensions）；`pip freeze --all` 实测 27 项；`pip check` 无断裂 |
 
 ## 二、2026-09-07 新增批次（15 项，全部来自一次 `pip install pipdeptree`）
 
@@ -222,4 +223,49 @@ PyMySQL==1.2.0
 | `requirements-dev.lock.txt` | 开发工具链 | **2** | pyright 1.1.411 + nodeenv 1.10.0 |
 | 合计 | 两份互斥无重叠 | **24** | 经 `Compare-Object` 与 `pip freeze --all` 逐项比对，**无差异** |
 
-项数演进：36（9-08）→ 38（9-11 10:08 装 SQLAlchemy 链）→ **24**（9-11 卸载 14 项孤儿）。
+项数演进：36（9-08）→ 38（9-11 10:08 装 SQLAlchemy 链）→ **24**（9-11 卸载 14 项孤儿）→ **27**（9-18 装 Alembic 链）。
+
+## 八、2026-09-18 新增批次（3 项，Alembic 链 / Day 18 迁移）
+
+### 安装命令与动机
+
+```
+.\.venv\Scripts\python.exe -m pip install alembic -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+动机：学习计划第三阶段「Day 18：Alembic 迁移」（`_学习指南.txt` 第 112–116 行）要求初始化 Alembic、创建与执行迁移脚本；`_Python_Web全栈开发学习计划要求.txt` 第 10 行将 Alembic 列为后端技术栈之一。按规则 2.6 安装前已向用户说明，用户确认（「继续拍板」）后执行。
+
+### 新增的 3 项（证据）
+
+| 包 | 版本 | `dist-info` 创建时间 | 归属 |
+|---|---|---|---|
+| `alembic` | 1.20.0 | 2026-09-18 09:25:33 | 直接依赖 |
+| `Mako` | 1.4.1 | 2026-09-18 09:25:32 | 传递（alembic Requires: Mako） |
+| `MarkupSafe` | 3.0.3 | 2026-09-18 09:25:32 | 传递（Mako Requires: MarkupSafe） |
+
+- `pip show alembic` 实测：`Requires: Mako, SQLAlchemy, typing-extensions`；`Required-by:`（空，无其他包依赖它）。
+- SQLAlchemy 2.0.52、typing-extensions 4.16.0、greenlet 3.5.5 环境已存在且满足约束，未升级、未新增。
+
+### 归类结论
+
+**属项目直接依赖，已写入 `requirements.txt`。** alembic 是数据库迁移工具，不被应用运行时代码链（`todo_api` / `todo_app` / `day15_orm` 等）`import`，但按学习计划属后端技术栈的一等成员、部署时执行迁移，故与运行时同列入 `requirements.txt` / `requirements.lock.txt`，而非归到开发工具链（`requirements-dev.txt`）。理由已同步写入 `requirements.lock.txt` 第 6 条注释。
+
+### 同步更新位置
+
+| 文件 | 变更 |
+|---|---|
+| `requirements.txt` | 追加 `alembic==1.20.0`；补一段「第四阶段（数据库迁移，Day 18）」注释，与既有阶段注释风格对齐 |
+| `requirements.lock.txt` | 追加 alembic / Mako / MarkupSafe 三项（按 case-insensitive 字母序插入）；头部计数 22→25（运行时）、24→27（合计）；补第 6 条注释说明归类依据 |
+| `DEPENDENCIES.md` 第一节 | 时间线总览追加 2026-09-18 记录 |
+| `DEPENDENCIES.md` 第八节 | 本节，记录安装命令、动机、证据与归类 |
+
+### 安装后验证（证据式验收）
+
+| 验证项 | 命令 | 结果 |
+|---|---|---|
+| 可导入 | `python -c "import alembic, mako, markupsafe; print(...版本)"` | alembic 1.20.0 / mako 1.4.1 / markupsafe 3.0.3 |
+| 项数 | `pip freeze --all \| Measure-Object -Line` | 24 → **27** |
+| 依赖无断裂 | `pip check` | `No broken requirements found.` |
+
+> 遗留：安装过程中 pip 仍报 `WARNING: Ignoring invalid distribution ~uild`，为第五节记录的 `~uild` 幽灵残留目录所致，与本次无关，不影响 freeze 结果与运行。
+> 回退手段：alembic 为新增独立依赖，无其他包 `Required-by` 它，若日后弃用可 `pip uninstall alembic Mako MarkupSafe`（卸载属破坏性操作，需单独确认），再重采锁文件回到 24 项。

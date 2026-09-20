@@ -14,7 +14,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey, String, Table, func
+from sqlalchemy import Column, ForeignKey, String, Table, func, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -194,6 +194,21 @@ class Todo(Base):
         default=False,
         nullable=False,
         comment="是否已完成，默认未完成",
+    )
+
+    # ── Day 18 新增列：演示"改模型 → autogenerate 生成增量迁移"──────────────
+    # priority 任务优先级：1=低、2=中、3=高，默认 2（中）。
+    # 关键在 server_default 而不是 default：
+    #   ALTER TABLE ADD COLUMN 时，server_default 会写进 DDL 的 DEFAULT 子句，
+    #   数据库据此给【已存在的 9 行 todos】统一回填 2，不会留 NULL；
+    #   若改用 Python 端 default，DDL 里没有 DEFAULT，老行会是 NULL，
+    #   再叠加 nullable=False 会让 ALTER 直接失败。给"有数据的表"加非空列，
+    #   这是必须想清楚的点——也正是迁移工具比 create_all 强的地方
+    #   （create_all 只建新表，从不改已存在的表）。
+    priority: Mapped[int] = mapped_column(
+        server_default=text("2"),
+        nullable=False,
+        comment="优先级 1=低 2=中 3=高，默认中",
     )
 
     created_at: Mapped[datetime] = mapped_column(
