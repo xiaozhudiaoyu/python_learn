@@ -173,8 +173,14 @@ def main() -> None:
     check("TaskUpdate 有 extra=forbid，拼错字段 → 422", res.status, 422)
     print(f"        明细：{json.dumps(res.body.get('details'), ensure_ascii=False)}")
 
-    res = call("PATCH", f"/api/todos/{new_id}", json_body={"content": "学习 HTTP 基础"})
+    # Day 19 起 todos 接入数据库，内存版的种子数据（"学习 HTTP 基础"）不再保证存在，
+    # 撞名断言改为自给自足：先建一个"参照任务"，再把 new_id 改成它的 content → 409。
+    ref_content = f"Day 12 参照任务 {stamp}"
+    ref = call("POST", "/api/todos", json_body={"content": ref_content})
+    check("创建撞名参照任务 → 201", ref.status, 201)
+    res = call("PATCH", f"/api/todos/{new_id}", json_body={"content": ref_content})
     check("改成已有任务的内容 → 409", res.status, 409)
+    call("DELETE", f"/api/todos/{ref.body['id']}")  # 清理参照任务，不在库里留垃圾
 
     # ── 5. 204：成功但没有响应体 ─────────────────────────────────────
     print("\n【5】DELETE → 204 No Content（注意 raw body 必须是空的）")

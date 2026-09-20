@@ -20,6 +20,8 @@
 #   flush 之后才读得到。flush 只保证"这个事务内"能拿到 id 和看到改动，
 #   别的连接要等到 commit 才看得见（Day 16 demo 第 7 段专门验证这一点）。
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -149,6 +151,31 @@ def set_todo_done(session: Session, todo_id: int, done: bool = True) -> Todo | N
     return todo
 
 
+# ── Day 19 新增：通用字段更新 ─────────────────────────────────────────────
+# set_todo_done 只能改 done 一列，接口层的 PATCH 需要"客户端传什么就改什么"，
+# 所以补一个通用版。设计上保持与 set_todo_done 一致的约定：
+#   · 接收 Session、不 commit（事务边界归调用方）；
+#   · 不存在返回 None，让 service 层把它翻译成 404；
+#   · flush 一次，让 UPDATE 立刻发到数据库（便于日志观察与后续查询看到新值）。
+#
+# fields 由调用方从 Pydantic 的 model_dump(exclude_unset=True) 得到 ——
+# "字段合法性"（类型、长度、必填）已经在上层 Schema 校验过，DAO 层不重复做，
+# 只负责把值 setattr 到 ORM 对象上。这是分层的意义：每层只管自己那摊事。
+def update_todo(session: Session, todo_id: int, fields: dict[str, Any]) -> Todo | None:
+    """按 id 更新任意字段：改成功返回对象，不存在返回 None。不 commit。
+
+    fields 为空 dict 时也会走一遍 setattr 循环（等于什么都不改）+ flush，
+    这种"空更新"应该在 service 层提前拦掉（返回 400），DAO 层不判断业务语义。
+    """
+    todo = session.get(Todo, todo_id)
+    if todo is None:
+        return None
+    for key, value in fields.items():
+        setattr(todo, key, value)
+    session.flush()
+    return todo
+
+
 def delete_todo(session: Session, todo_id: int) -> bool:
     """按 id 删待办：删掉返回 True，不存在返回 False。不 commit。"""
     todo = session.get(Todo, todo_id)
@@ -170,5 +197,6 @@ __all__ = [
     "get_todo",
     "list_todos",
     "set_todo_done",
+    "update_todo",
     "delete_todo",
 ]

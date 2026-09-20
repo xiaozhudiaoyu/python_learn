@@ -1,91 +1,98 @@
-# 路由模块：/api/todos —— 待办清单接口（起步版，数据先放内存 list）。
+# 路由模块：/api/todos —— 待办清单接口（Day 19 · 数据库版）。
 #
-# 起步阶段不接数据库（那是第三阶段 SQLAlchemy 的事），先用一个模块级列表演示"接口层"。
-# 第三阶段接入数据库后，这个文件仍然只管"接收请求、返回响应"，数据读写会交给独立的模型/仓储层。
+# 与起步版（内存 list）最大的区别：数据读写全部下沉到 service 层，
+# 这个文件只剩下"接收 HTTP 请求 → 调 service → 返回 Schema"三件事。
+# 通读一遍你会发现每个函数体都短得离谱 —— 这正是分层的意义：
+# router 薄到"换个数据库也不用动它"，业务复杂度被 service / dao 吸收掉了。
+#
+# ── Day 19 的三层调用链 ─────────────────────────────────────────────────
+#   HTTP 请求
+#     ↓
+#   router（本文件）     只管：取参数、调 service、回响应。不碰 ORM、不碰事务。
+#     ↓
+#   service.py           只管：业务规则（409/400/404）、事务边界、ORM ↔ Schema 转换。
+#     ↓
+#   day16_crud.dao       只管：select / insert / update / delete。不含业务判断、不 commit。
+#     ↓
+#   day15_orm.models     只管：表结构映射。
+#
+# ── Session 从哪来？─────────────────────────────────────────────────────
+# 每个接口签名里多了一个 `session: Session = Depends(get_session)`。
+# 这是 Day 11 讲过的依赖注入：FastAPI 看到 Depends(get_session)，
+# 会在调用本函数【之前】先执行 get_session（一个 yield 生成器），
+# 把 yield 出来的 Session 对象塞进 session 参数；
+# 本函数返回【之后】，FastAPI 再回到 get_session 的 yield 之后那段，
+# 执行 finally 里的 session.close()。一个请求一个 Session，自动借自动还。
+#
+# 注意 session 参数【不是】客户端要传的字段 —— Swagger 文档里不会多出
+# 一个叫 session 的表单输入框。FastAPI 认得 Session 这个类型 + Depends 的组合，
+# 知道它是"框架注入"而不是"请求参数"（对照 main.py 顶部的参数取值规则表）。
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy.orm import Session
 
-from todo_api.exceptions import NothingToUpdateError, TodoConflictError, TodoNotFoundError
+from todo_api import service
+from todo_api.db import get_session
 from todo_api.schemas import ErrorOut, TaskCreate, TaskOut, TaskUpdate
 
 # 定义本模块的路由：统一前缀 /api/todos；tags 会在 Swagger 文档里作为分组标题显示。
 router = APIRouter(prefix="/api/todos", tags=["todos"])
 
-# ── Day 13：把"初始数据"和"运行时数据"分开，重置接口才能恢复原始状态 ──────
-_INITIAL_TODOS: list[dict[str, object]] = [
-    {"id": 1, "content": "学习 HTTP 基础", "done": True},
-    {"id": 2, "content": "跑通 FastAPI 起步", "done": False},
-    {"id": 3, "content": "预习 SQLAlchemy", "done": False},
-]
 
-# 运行时数据：启动时从初始数据拷贝一份，所有增删改都在这份上操作。
-_FAKE_TODOS: list[dict[str, object]] = [todo.copy() for todo in _INITIAL_TODOS]
+@router.get("")
+def list_todos(
+    done: bool | None = None,
+    session: Session = Depends(get_session),
+) -> list[TaskOut]:
+    """返回全部任务，可按完成状态过滤。
 
-
-@router.get("")                          # ① 装饰器：GET 方法 + 路径（prefix + "" = /api/todos）
-def list_todos(done: bool | None = None) -> list[dict[str, object]]:
-    """返回全部任务。HTTP 方法默认就是 GET，对应路径 /api/todos。
-
-    Day 13 新增：可选查询参数 done，按完成状态过滤。
-      · 不传        → 返回全部（和之前一样）
+    Day 13 的查询参数 done 原样保留：
+      · 不传        → 返回全部
       · ?done=true  → 只返回已完成的
       · ?done=false → 只返回未完成的
-    取值规则：done 不在路径里、且是标量(bool | None)，FastAPI 按【查询参数】取值，
-    自动把 "true"/"false" 转成 bool；FastAPI 的 bool 还接受 yes/no/on/off/1/0。
+
+    Day 19 的变化只在函数体：原来是对内存 list 做列表推导，
+    现在是一行 service.list_todos(session, done=done)。
+    返回类型 list[TaskOut] 没变 —— 对客户端来说，接口契约完全兼容，
+    前端代码一行都不用改。这就是"分离"带来的好处：内部重构不外溢。
     """
-    if done is None:
-        return _FAKE_TODOS
-    return [todo for todo in _FAKE_TODOS if todo["done"] == done]
+    return service.list_todos(session, done=done)
 
 
-def _find_todo(todo_id: int) -> dict[str, object]:
-    """Day 12 抽出来的小助手：找不到就抛领域异常，调用处一行都不写错误处理。
-
-    这就是"用异常代替返回错误值"的直接好处：三个接口都要按 id 找任务，
-    找不到的处理只写在这一个 raise 上，状态码 404 由异常类自己带、响应结构由 handler 统一决定。
-    （对比原来：每个接口都得自己 for 循环 + raise HTTPException(404, ...)。）
-    """
-    for todo in _FAKE_TODOS:
-        if todo["id"] == todo_id:
-            return todo
-    raise TodoNotFoundError(todo_id)
-
-
-# ── Day 13：数据重置（固定路径放在 /{todo_id} 之前，避免被路径参数吞掉）────
 @router.post(
     "/reset",
     response_model=list[TaskOut],
     status_code=status.HTTP_200_OK,
 )
-def reset_todos() -> list[TaskOut]:
-    """把内存数据恢复成初始状态，方便反复测试。
+def reset_todos(session: Session = Depends(get_session)) -> list[TaskOut]:
+    """清空 todos 表，返回空列表。
 
-    为什么用 POST 而不是 GET？
+    Day 19 语义调整（与内存版的区别）：
+      内存版是"恢复初始 3 条种子数据"；数据库版改成"清空所有 todo"。
+      原因：数据库里 todo 可能已经和 user/tag 建立了关联，
+      硬塞回固定种子数据会和外键关系打架；清空调用方自己再 POST 几条更诚实。
+      需要种子数据请走 Alembic 迁移或独立的 seed 脚本，不混在接口里。
+
+    为什么用 POST 而不是 GET？（这条没变）
       重置会修改服务器状态（幂等但非安全），GET 语义上不该有副作用；
       POST 表示"执行一个动作"，符合 REST 对"非 CRUD 操作"的常见处理方式。
     """
-    _FAKE_TODOS.clear()
-    _FAKE_TODOS.extend(todo.copy() for todo in _INITIAL_TODOS)
-    return [TaskOut.model_validate(todo) for todo in _FAKE_TODOS]
+    return service.reset_todos(session)
 
 
 @router.get(
-    "/{todo_id}",                          # ① 路径里的 {todo_id} 声明了"这是个路径参数"
+    "/{todo_id}",
     responses={404: {"model": ErrorOut, "description": "任务不存在（统一错误结构，见 /docs）"}},
 )
-def get_todo(todo_id: int) -> TaskOut:     # ② 参数名对上路径占位符，自动取值
-    """按编号返回单个任务，演示【路径参数】：/api/todos/2。
+def get_todo(todo_id: int, session: Session = Depends(get_session)) -> TaskOut:
+    """按编号返回单个任务：/api/todos/2。
 
-    类型注解 todo_id: int 是 FastAPI 的精髓，一份注解同时干三件事：
-      1) 取值来源——名字在路径 {todo_id} 里，故按"路径参数"取值；
-      2) 运行时转换 + 校验——URL 里的 "2" 自动转成整数 2；转不了(如 /api/todos/abc)直接返回 422；
-      3) 自动生成文档——/docs 里会标注该参数的类型。
-    更强校验可写：todo_id: int = Path(..., ge=1)（需 from fastapi import Path）。
-
-    Day 12 变化：函数体里不再自己拼 404，只需 _find_todo()；
-    能走到 return 这一行，说明任务一定存在。错误响应长什么样，去 /docs 看 404 那一档。
+    路径参数 todo_id 的取值/校验/文档生成规则和起步版完全一样（见 main.py 顶部说明），
+    Day 19 只是把"在内存 list 里 for 循环找"换成了"service 调 dao 调 session.get"。
+    404 的处理也没变：service 层抛 TodoNotFoundError，由 exceptions.py 的 handler
+    统一翻译成 {code, message, details} 结构 —— router 里一行错误处理都不用写。
     """
-    return TaskOut.model_validate(_find_todo(todo_id))
+    return service.get_todo(session, todo_id)
 
 
 @router.post(
@@ -97,37 +104,29 @@ def get_todo(todo_id: int) -> TaskOut:     # ② 参数名对上路径占位符�
         422: {"model": ErrorOut, "description": "请求体没通过校验（统一后的自定义结构）"},
     },
 )
-def create_todo(payload: TaskCreate, response: Response) -> TaskOut:
-    """演示【请求体】：客户端 POST 一段 JSON，FastAPI 用 TaskCreate 校验后交给 payload。
+def create_todo(
+    payload: TaskCreate,
+    response: Response,
+    session: Session = Depends(get_session),
+) -> TaskOut:
+    """新增任务。客户端 POST 一段 JSON，FastAPI 用 TaskCreate 校验后交给 payload。
 
-    语法要点（对照 main.py 里那张“参数取值来源”规则表）：
-      · payload: TaskCreate —— 参数类型是 Pydantic 模型 → 从“请求体 body”取值，不是路径/查询；
-      · 校验由 TaskCreate 里的 Field 规则完成：content 为空串/超长、缺字段等，直接返回 422，不会进函数体；
-      · response_model=TaskOut —— 返回值按 TaskOut 结构序列化，顺带过滤掉多余字段；
-      · status_code=201 —— “创建成功”的标准状态码（默认是 200）。
+    参数取值规则（对照 main.py 顶部那张表）：
+      · payload: TaskCreate          → 类型是 Pydantic 模型 → 从请求体取值；
+      · response: Response           → 框架注入，用来回写 Location 头；
+      · session: Session = Depends() → 框架注入，一个请求一个 Session。
+    三个参数来源各不相同，但函数签名里并排写着，FastAPI 靠"类型 + 默认值"自动分辨。
 
-    Day 12 新增两处：
-      · response: Response —— 框架注入的“响应对象”，用它回写 Location 头。
-        201 的规范动作是同时告诉客户端新资源在哪，前端可以直接拿这个 URL 再 GET 一次；
-        它不是接口参数，Swagger 里不会多出一个叫 response 的表单字段。
-      · 重名 → raise TodoConflictError → 409：格式完全合法、只是和现有数据冲突，
-        这种错误不能归给 422（见 exceptions.py 里对 409/422 区别的解释）。
-      · responses={...} —— 只影响文档，不影响运行时行为：写上去，/docs 里每个接口
-        就会多出一档可展开的错误响应示例。
-        注意 422 这一档：接口一带请求体，FastAPI 就自动在文档里补一个 422（默认指向
-        HTTPValidationError）；这里显式写 422 是为了把它覆盖成我们自己的 ErrorOut。
+    Day 19 的变化：
+      · 不再自己算 new_id（内存版是 max(id)+1），id 由数据库自增列生成；
+      · 不再自己检查重名，409 判断下沉到 service 层；
+      · Location 头照写，但 id 从 service 返回的 TaskOut 里拿 ——
+        注意这里拿到的已经是 Schema 对象而不是 ORM 对象，created.id 就是个普通 int，
+        不会因为 session 关闭而失效。这正是"分离"在细节处的体现。
     """
-    if any(todo["content"] == payload.content for todo in _FAKE_TODOS):
-        raise TodoConflictError(payload.content)
-
-    # 取最大 id + 1（Day 12 加了 DELETE 后，不能再靠 len()+1 了：
-    # 一旦删掉最后一条，len()+1 就会和现有 id 撞上，产生两条同号的任务）
-    new_id = max((int(str(todo["id"])) for todo in _FAKE_TODOS), default=0) + 1
-    created = {"id": new_id, "content": payload.content, "done": payload.done}
-    _FAKE_TODOS.append(created)
-
-    response.headers["Location"] = f"/api/todos/{new_id}"
-    return TaskOut.model_validate(created)
+    created = service.create_todo(session, payload)
+    response.headers["Location"] = f"/api/todos/{created.id}"
+    return created
 
 
 @router.patch(
@@ -139,33 +138,21 @@ def create_todo(payload: TaskCreate, response: Response) -> TaskOut:
         409: {"model": ErrorOut, "description": "新内容和别的任务重名"},
     },
 )
-def update_todo(todo_id: int, payload: TaskUpdate) -> TaskOut:
-    """演示【部分更新 PATCH】与 400。
+def update_todo(
+    todo_id: int,
+    payload: TaskUpdate,
+    session: Session = Depends(get_session),
+) -> TaskOut:
+    """部分更新（PATCH）。
 
-    语法要点：
-      · payload: TaskUpdate —— 依然是"类型是 Pydantic 模型 → 从 body 取值"，两个字段都可省；
-      · model_dump(exclude_unset=True) —— 只拿客户端真正传了的字段，这是 PATCH 语义的关键；
-      · HTTP 方法不自动推断：@router.patch 就是 PATCH，路径可以和 GET /{todo_id} 一样，
-        因为 FastAPI 是按"方法 + 路径"组合匹配路由的。
-
-    错误全部靠 raise：400（空改）/ 404（不存在）/ 409（重名），
-    函数体里没有一处 "return 错误体" —— 这正是 Day 12 要体会的清爽感。
+    三类错误（400/404/409）全部由 service 层 raise，router 不写一处 if：
+      · 400 —— payload 一个字段都没传（exclude_unset 后为空）；
+      · 404 —— todo_id 不存在；
+      · 409 —— 新 content 和别的任务重名。
+    起步版里这些判断散落在函数体各处，现在集中到 service，router 只剩一行调用。
+    将来要加"优先级不能超出范围"之类的新规则，也只动 service，router 不碰。
     """
-    fields = payload.model_dump(exclude_unset=True)
-    if not fields:
-        raise NothingToUpdateError(sorted(TaskUpdate.model_fields))
-
-    todo = _find_todo(todo_id)
-    new_content = fields.get("content")
-    if (
-        new_content is not None
-        and new_content != todo["content"]
-        and any(other["content"] == new_content for other in _FAKE_TODOS)
-    ):
-        raise TodoConflictError(str(new_content))
-
-    todo.update(fields)
-    return TaskOut.model_validate(todo)
+    return service.update_todo(session, todo_id, payload)
 
 
 @router.delete(
@@ -173,13 +160,13 @@ def update_todo(todo_id: int, payload: TaskUpdate) -> TaskOut:
     status_code=status.HTTP_204_NO_CONTENT,
     responses={404: {"model": ErrorOut, "description": "任务不存在"}},
 )
-def delete_todo(todo_id: int) -> None:
-    """演示【204 No Content】：删成功但没什么可返回的。
+def delete_todo(todo_id: int, session: Session = Depends(get_session)) -> None:
+    """删除任务，成功返回 204 No Content。
 
-    三条要一起记住的细节（少一条就不规范）：
-      · 不写 response_model，函数也不 return 任何东西（-> None），只发一个空 body；
-      · 204 语义上不允许带响应体，所以状态码得靠状态行看，不能靠解析 JSON 判断成功；
-      · 前端拿到 204 应该直接去刷新列表，而不是尝试 JSON.parse("")。
-    幂等性小常识：同一个 id 再 DELETE 一次就变成 404（已不存在），而 PUT 重复调仍是那个结果。
+    204 的三条细节（与起步版一致）：
+      · 不写 response_model，函数返回 None，只发一个空 body；
+      · 204 语义上不允许带响应体，成功与否看状态行，不能靠解析 JSON；
+      · 前端拿到 204 应该直接刷新列表，而不是尝试 JSON.parse("")。
+    幂等性：同一个 id 再 DELETE 一次会变成 404（已不存在）。
     """
-    _FAKE_TODOS.remove(_find_todo(todo_id))
+    service.delete_todo(session, todo_id)

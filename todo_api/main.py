@@ -44,7 +44,7 @@ from todo_api.routers import depends_demo, errors, todos, users
 # OpenAPI 文档元信息（Day 12）：给文档里的每个分组配一句"人话简介"。
 # 注意 name 必须和各 router 里写的 tags 一字不差（含中间点 ·），对不上就不会显示说明。
 _TAGS_METADATA = [
-    {"name": "todos", "description": "待办清单主业务接口（Day 9~13），增删改查 + 查询过滤 + 数据重置，完整错误响应。"},
+    {"name": "todos", "description": "待办清单主业务接口（Day 9~13 起步、Day 19 接入数据库），增删改查 + 查询过滤 + 清空重置，完整错误响应。"},
     {"name": "users", "description": "用户接口（Day 9 查询参数示例，第三阶段接数据库后会大改）。"},
     {"name": "Day11 · Depends 依赖注入", "description": "依赖树 / yield 收尾 / 登录态链 / 依赖覆盖的演示集合。"},
     {"name": "Day12 · 异常与错误响应", "description": "故意出错的教学样本：400/401/404/405/409/422/500 一次看全。"},
@@ -54,10 +54,16 @@ _TAGS_METADATA = [
 # Day 11 新增 dependencies=[...]：【应用级依赖】，对全站所有接口统一生效；
 # request_timer 返回 None，不会往任何接口注入参数，只负责在服务端记一行耗时日志。
 app = FastAPI(
-    title="Todo API（第一阶段起步）",
-    version="0.1.0",
+    title="Todo API（Day 19 · 数据库版）",
+    version="0.2.0",
     dependencies=[Depends(request_timer)],
-    description="学习用项目。错误响应统一为 {code, message, details} 结构，见各接口的 Responses 区。",
+    description=(
+        "学习用项目。Day 19 起 /api/todos 接入 MySQL（SQLAlchemy 2.0 + PyMySQL），"
+        "接口模型（Pydantic Schema）与 ORM 模型（SQLAlchemy Model）严格分离。"
+        "错误响应统一为 {code, message, details} 结构，见各接口的 Responses 区。\n\n"
+        "启动前请确认：① MySQL 服务已运行；② 已执行 `alembic upgrade head` 建好表结构"
+        "（本应用启动时【不会】自动 create_all，建表/改表一律走 Alembic 迁移，见 Day 18）。"
+    ),
     openapi_tags=_TAGS_METADATA,
 )
 

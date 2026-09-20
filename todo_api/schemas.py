@@ -25,7 +25,21 @@ class TaskOut(BaseModel):
 
     路由上写 response_model=TaskOut 后，FastAPI 会按此模型序列化返回值，
     顺带把模型里没有的字段过滤掉，并在 /docs 里展示出来。
+
+    Day 19 新增 model_config：打开 from_attributes 后，model_validate 可以
+    直接读"对象的属性"而不只是"dict 的键"。这是"ORM 对象 → Pydantic 模型"
+    转换的开关：service 层拿到 SQLAlchemy 的 Todo 实例，一行
+    TaskOut.model_validate(todo) 就能得到接口要返回的 TaskOut，
+    不必先手动拼 dict。Pydantic v1 时代这个开关叫 orm_mode=True。
+
+    注意它只影响"怎么读输入"，不影响"输出什么字段"——
+    ORM 的 Todo 上有 priority/created_at/owner_id/owner/tags 等一堆属性，
+    但 TaskOut 只声明了 id/content/done，多出来的属性会被自动忽略。
+    这正是"接口模型 vs ORM 模型分离"的落点：Schema 决定对外暴露什么，
+    ORM 决定对内存储什么，两边字段不必一一对应。
     """
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     content: str
