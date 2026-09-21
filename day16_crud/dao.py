@@ -67,9 +67,17 @@ def get_user_by_username(session: Session, username: str) -> User | None:
     return session.scalars(stmt).first()
 
 
-def list_users(session: Session) -> list[User]:
-    """列出全部用户，按 id 升序（保证每次顺序稳定，方便断言与查看）。"""
+def list_users(session: Session, limit: int | None = None) -> list[User]:
+    """列出用户，按 id 升序（保证每次顺序稳定，方便断言与查看）。
+
+    Day 20 新增可选 limit：传整数则只取前 N 条（SQL LIMIT 子句），
+    传 None（默认）列全部。默认值 None 保证既有调用 list_users(session)
+    不受影响（run_day16_demo.py / day16_crud/test.py 都是单参数调用）。
+    limit 下推到 SQL 而不是查全表再切片，数据量大时才不会白白捞一堆行。
+    """
     stmt = select(User).order_by(User.id)
+    if limit is not None:
+        stmt = stmt.limit(limit)
     # .all() 返回的是 Sequence，包一层 list() 得到确定的 list[User]，对类型检查器更友好。
     return list(session.scalars(stmt).all())
 
@@ -87,6 +95,24 @@ def update_user_email(session: Session, user_id: int, email: str | None) -> User
         return None
     user.email = email
     session.flush()            # 让 UPDATE 立刻发出（也可留到 commit 时再发，这里为看清时序）
+    return user
+
+
+# ── Day 20 新增：用户通用字段更新 ─────────────────────────────────
+# update_user_email 只能改 email 一列，接口层的 PATCH 需要"传什么改什么"，
+# 所以补一个通用版，与 Day 19 的 update_todo 同一套路、同一约定：
+#   · 接收 Session、不 commit（事务边界归调用方）；
+#   · 不存在返回 None，让 service 层翻译成 404；
+#   · fields 来自 Pydantic model_dump(exclude_unset=True)，合法性已在上层校验。
+# username 的唯一性由 service 层提前检查（409），数据库唯一索引兜底。
+def update_user(session: Session, user_id: int, fields: dict[str, Any]) -> User | None:
+    """按 id 更新用户任意字段：改成功返回对象，不存在返回 None。不 commit。"""
+    user = session.get(User, user_id)
+    if user is None:
+        return None
+    for key, value in fields.items():
+        setattr(user, key, value)
+    session.flush()
     return user
 
 
@@ -192,6 +218,7 @@ __all__ = [
     "get_user_by_username",
     "list_users",
     "update_user_email",
+    "update_user",
     "delete_user",
     "create_todo",
     "get_todo",

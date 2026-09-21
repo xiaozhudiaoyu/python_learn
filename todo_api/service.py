@@ -1,4 +1,4 @@
-# 模块：业务服务层（Day 19 · 接口模型 vs ORM 模型分离）。
+# 模块：业务服务层（Day 19 起步 · Day 20 扩展 User 业务）。
 #
 # 这是"分离"最关键的一层。它夹在 router（HTTP 层）和 dao（数据访问层）中间，
 # 负责三件事：
@@ -30,10 +30,16 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from day15_orm import Todo
+from day15_orm import Todo, User
 from day16_crud import dao
-from todo_api.exceptions import NothingToUpdateError, TodoConflictError, TodoNotFoundError
-from todo_api.schemas import TaskCreate, TaskOut, TaskUpdate
+from todo_api.exceptions import (
+    NothingToUpdateError,
+    TodoConflictError,
+    TodoNotFoundError,
+    UserConflictError,
+    UserNotFoundError,
+)
+from todo_api.schemas import TaskCreate, TaskOut, TaskUpdate, UserCreate, UserOut, UserUpdate
 
 logger = logging.getLogger("todo_api.service")
 
@@ -192,11 +198,118 @@ def reset_todos(session: Session) -> list[TaskOut]:
     return []
 
 
+# ── User 业务（Day 20 综合练习）─────────────────────────────────
+# 与上面 Todo 业务同一套分层规矩：ORM 的 User 只在本层活动，返回值一律
+# 转成 UserOut（Schema）；事务 commit/rollback 也在这里收口。
+# users 路由从"内存假数据"升级为数据库版，靠的就是这一组函数。
+# 函数名与 dao 层同名（create_user 等），但通过 dao. 前缀调用，不冲突——
+# 这和 Day 19 的 create_todo / dao.create_todo 是同一个模式。
+def _user_to_out(user: User) -> UserOut:
+    """把 ORM 的 User 对象转成接口层的 UserOut（依赖 from_attributes）。"""
+    return UserOut.model_validate(user)
+
+
+def _assert_username_not_taken(
+    session: Session, username: str, *, exclude_id: int | None = None
+) -> None:
+    """username 唯一性预检：撞名抛 UserConflictError（409）。
+
+    复用 dao.get_user_by_username（Day 16 已有）；exclude_id 用于 PATCH 改名时
+    把"自己"排除掉——否则改自己的其他字段也会撞自己的名。
+    数据库层 username 列还有唯一索引兜底，这里提前查是为了返回友好的 409。
+    """
+    existing = dao.get_user_by_username(session, username)
+    if existing is not None and existing.id != exclude_id:
+        raise UserConflictError(username)
+
+
+def create_user(session: Session, payload: UserCreate) -> UserOut:
+    """创建用户：username 撞名 → 409；成功 commit 后转 UserOut 返回。"""
+    try:
+        _assert_username_not_taken(session, payload.username)
+        user = dao.create_user(session, payload.username, payload.email)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    return _user_to_out(user)
+
+
+def list_users(session: Session, *, limit: int | None = None) -> list[UserOut]:
+    """列出用户（可选 limit 下推到 SQL），逐个转 UserOut。只读操作无需 commit。"""
+    users = dao.list_users(session, limit=limit)
+    return [_user_to_out(u) for u in users]
+
+
+def get_user(session: Session, user_id: int) -> UserOut:
+    """按 id 查单个用户，不存在 → 404（UserNotFoundError）。"""
+    user = dao.get_user(session, user_id)
+    if user is None:
+        raise UserNotFoundError(user_id)
+    return _user_to_out(user)
+
+
+def update_user(session: Session, user_id: int, payload: UserUpdate) -> UserOut:
+    """部分更新用户：exclude_unset 取实际传了的字段。
+
+    · 空 body → 400（NothingToUpdateError，复用 Day 19 的异常）；
+    · 用户不存在 → 404；
+    · 改名撞到别人 → 409（exclude_id 排除自己）；
+    · email 传 null 清空（ORM 列可空）。
+    """
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        raise NothingToUpdateError(sorted(UserUpdate.model_fields))
+
+    try:
+        existing = dao.get_user(session, user_id)
+        if existing is None:
+            raise UserNotFoundError(user_id)
+
+        new_username = fields.get("username")
+        if new_username is not None and new_username != existing.username:
+            _assert_username_not_taken(session, str(new_username), exclude_id=user_id)
+
+        updated = dao.update_user(session, user_id, fields)
+        assert updated is not None  # 上面已判存在，这里帮 Pyright 收窄 Optional
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    return _user_to_out(updated)
+
+
+def delete_user(session: Session, user_id: int) -> None:
+    """删除用户：不存在 → 404；成功返回 None（router 转 204）。
+
+    删用户不会丢待办：owner_id 外键设了 ondelete="SET NULL"（数据库层 DDL，
+    见 day15_orm/models.py 的 owner_id 定义），MySQL 在 DELETE user 时自动把
+    名下 todos 的 owner_id 置 NULL，待办变成"无主"状态保留下来。
+    注意 User.todos 的 ORM cascade 是注释掉的，所以靠的是数据库外键的
+    SET NULL，不是 ORM 级联删除。
+    """
+    try:
+        deleted = dao.delete_user(session, user_id)
+        if not deleted:
+            raise UserNotFoundError(user_id)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
+
 __all__ = [
+    # Todo 业务（Day 19）
     "create_todo",
     "list_todos",
     "get_todo",
     "update_todo",
     "delete_todo",
     "reset_todos",
+    # User 业务（Day 20）
+    "create_user",
+    "list_users",
+    "get_user",
+    "update_user",
+    "delete_user",
 ]

@@ -66,6 +66,50 @@ class TaskUpdate(BaseModel):
     done: bool | None = Field(default=None, description="新的完成状态")
 
 
+# ── Day 20 新增：User 接口模型 ──────────────────────────────────
+# 与 Task* 同一套分层规矩：Schema 只管"接口收什么/发什么"，
+# ORM 的 User（day15_orm/models.py）只管"数据库存什么"，两边职责不跨。
+# ORM User 有 id/username/email/created_at/todos，但 UserOut 只暴露前三个——
+# created_at 是内部入库时间、todos 是关联对象，都不该随用户列表接口外泄。
+class UserCreate(BaseModel):
+    """POST /api/users 的请求体。
+
+    username 约束对齐 ORM 的 String(50)；数据库层还有唯一索引，
+    重名会被 service 层翻译成 409（而不是等 IntegrityError 变 500）。
+    email 可选，对齐 ORM 的 String(120) 可空列。
+    学习期不引入 email-validator（那是新依赖，规则 2.6），只用长度约束；
+    生产环境可换 pydantic.EmailStr 做格式校验。
+    """
+
+    username: str = Field(min_length=1, max_length=50, description="登录名，1~50 字，全表唯一")
+    email: str | None = Field(default=None, max_length=120, description="邮箱，选填")
+
+
+class UserOut(BaseModel):
+    """用户响应体。同 TaskOut，开 from_attributes 让 service 层能直接把
+    ORM 的 User 对象喂进来转换，多出的 created_at/todos 属性被自动忽略。
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    email: str | None
+
+
+class UserUpdate(BaseModel):
+    """PATCH /api/users/{id} 的请求体：两个字段都可选，但至少给一个。
+
+    同 TaskUpdate：extra=forbid 拦拼错字段，None 默认值区分"没传"与"传 null"。
+    email 传 null 表示清空邮箱（ORM 列可空）。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    username: str | None = Field(default=None, min_length=1, max_length=50, description="新登录名")
+    email: str | None = Field(default=None, max_length=120, description="新邮箱；传 null 清空")
+
+
 class FieldErrorOut(BaseModel):
     """【字段级】校验明细，只在校验类错误（422 / 400）里出现。"""
 

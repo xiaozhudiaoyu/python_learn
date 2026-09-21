@@ -95,6 +95,43 @@ class NothingToUpdateError(AppError):
         )
 
 
+# ── Day 20 新增：User 实体的领域异常 ──────────────────────────────
+# 与 Todo 异常同一套机制（继承 AppError，自带 status_code/code），
+# 不复用 TodoNotFoundError 是因为错误码与文案都是"任务"语境，
+# 用在用户身上会误导前端（code 是给程序判断的，必须语义准确）。
+class UserNotFoundError(AppError):
+    """404：用户不存在。"""
+
+    status_code = status.HTTP_404_NOT_FOUND
+    code = "user_not_found"
+    default_message = "用户不存在"
+
+    def __init__(self, user_id: int) -> None:
+        super().__init__(
+            f"没有找到编号为 {user_id} 的用户",
+            details=[{"field": "path.user_id", "type": "not_found", "message": f"{user_id} 不在数据中"}],
+        )
+
+
+class UserConflictError(AppError):
+    """409：用户名已存在（username 列有数据库唯一索引，见 day15_orm/models.py）。
+
+    与 TodoConflictError 的区别：username 重复是"数据完整性"问题，
+    数据库层建了唯一索引兜底；应用层这道检查只是为了返回友好的 409
+    而不是难看的 500（IntegrityError）。两层都要有，职责不同。
+    """
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "user_conflict"
+    default_message = "用户名已存在"
+
+    def __init__(self, username: str) -> None:
+        super().__init__(
+            f"用户名已被占用：{username}",
+            details=[{"field": "body.username", "type": "duplicate", "message": "换一个用户名"}],
+        )
+
+
 # HTTPException 的状态码 → 机器可读码。没列出来的自动退化成 http_418 这种形式。
 _HTTP_CODE_MAP: dict[int, str] = {
     status.HTTP_400_BAD_REQUEST: "bad_request",
