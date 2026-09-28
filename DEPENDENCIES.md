@@ -20,6 +20,7 @@
 | 2026-09-11 | **pipdeptree 本体已迁往系统 Python，其 14 个传递依赖从 `.venv` 卸载**；两份锁文件重采 | 38 → **24** | `pip freeze --all` 卸载前后比对；`pipdeptree -r -p` 反查；`pip check` |
 | 2026-09-14 | 按规则 2.6 补齐声明缺口：`requirements.txt` 追加 `SQLAlchemy==2.0.52`、`PyMySQL==1.2.0` 两行；`requirements.lock.txt` 第 5 条注释同步；本文件第六节“待办：声明缺口”改为“声明缺口补齐记录” | 24（持平，仅声明层变更，未动 `.venv`） | `pip show SQLAlchemy PyMySQL` 实测输出（SQLAlchemy 2.0.52 / PyMySQL 1.2.0）；`requirements.lock.txt` 第 42/45 行；本文件第六节 `dist-info` 时间戳表格 |
 | 2026-09-18 09:25:32–09:25:33 | **第八批：Alembic 链（Day 18 迁移）**：`pip install alembic -i 清华镜像`，新增 alembic + Mako + MarkupSafe；同步写入 `requirements.txt`、`requirements.lock.txt` | 24 → **27** | `dist-info` 创建时间戳；`pip show alembic`（Requires: Mako, SQLAlchemy, typing-extensions）；`pip freeze --all` 实测 27 项；`pip check` 无断裂 |
+| 2026-09-28 10:08:01–10:08:05 | **环境结构变更：迁移至 uv 托管**：删除旧 `.venv`（virtualenv 20.38.0 + pip），新建 `pyproject.toml` 后 `uv sync` 重建环境并生成 `uv.lock`；旧 `requirements*.txt` 四份全部保留（双轨并存） | 27 → **26**（uv 重解析全部依赖，无 pip 自身及历史残留；详见第九节） | 新 `pyvenv.cfg` 的 `uv = 0.12.8` 行；`.venv`/`uv.lock` NTFS 创建时间戳；`uv sync` 安装清单输出 |
 
 ## 二、2026-09-07 新增批次（15 项，全部来自一次 `pip install pipdeptree`）
 
@@ -269,3 +270,45 @@ PyMySQL==1.2.0
 
 > 遗留：安装过程中 pip 仍报 `WARNING: Ignoring invalid distribution ~uild`，为第五节记录的 `~uild` 幽灵残留目录所致，与本次无关，不影响 freeze 结果与运行。
 > 回退手段：alembic 为新增独立依赖，无其他包 `Required-by` 它，若日后弃用可 `pip uninstall alembic Mako MarkupSafe`（卸载属破坏性操作，需单独确认），再重采锁文件回到 24 项。
+
+## 九、2026-09-28 环境结构变更：迁移至 uv 托管
+
+### 变更内容与动机
+
+用户要求「使用 UV 重建项目」。按规则 2.2（M 档）先出方案经确认后执行；旧依赖文件处置经询问，用户选择「全部保留」（与 pipeline-fault-tracker 先例的删除做法不同，本项目双轨并存）。
+
+| 动作 | 详情 |
+|---|---|
+| 新建 `pyproject.toml` | `[project].dependencies` 照抄 `requirements.txt` 的 6 个锁定版本；pyright 归入 `[dependency-groups].dev`（对应 `requirements-dev.txt`）；`[tool.uv] package = false`（纯脚本仓库不构建分发）；`[[tool.uv.index]]` 设清华镜像为默认源（本机默认 PyPI 连不上，见 `requirements.txt` 注释） |
+| 删除旧 `.venv` | 原为 virtualenv 20.38.0 创建 + pip 26.0.1 管理（旧 `pyvenv.cfg` 已随删除消失，本行依据为迁移前实测 `pip --version` 输出与既有台账记录） |
+| `uv sync` 重建 | uv 0.12.8，使用系统 CPython 3.14.7（`D:\Program Files\Python\Python314`）；新 `pyvenv.cfg` 含 `uv = 0.12.8` 行；生成 `uv.lock`（28 个包解析，26 个安装） |
+
+### 证据（时间戳与输出）
+
+- `.venv\pyvenv.cfg` NTFS 创建时间：2026-09-28 10:08:01；`uv.lock` 创建时间：10:08:05。
+- `uv sync` 安装清单（26 项，含 dev 组）：alembic 1.20.0 / annotated-doc 0.0.5 / annotated-types 0.8.0 / anyio 4.15.1 / click 8.5.0 / fastapi 0.141.1 / greenlet 3.5.6 / h11 0.16.0 / httptools 0.8.0 / idna 3.20 / mako 1.4.3 / markupsafe 3.0.3 / nodeenv 1.11.0 / pydantic 2.13.5 / pydantic-core 2.46.5 / pymysql 1.2.0 / pyright 1.1.411 / python-dotenv 1.2.3 / pyyaml 6.0.3 / sqlalchemy 2.0.52 / starlette 1.7.0 / typing-extensions 4.16.0 / typing-inspection 0.4.4 / uvicorn 0.52.4 / watchfiles 1.3.0 / websockets 17.1。
+- 与旧环境 27 项的差异属工具链自身而非业务依赖：旧环境含 pip 及其历史残留（如第五节 `~uild` 幽灵目录），uv 环境不装 pip；6 个直接依赖版本与 `requirements.txt` 声明逐一相符。
+
+### 同步更新位置
+
+| 文件 | 变更 |
+|---|---|
+| `pyproject.toml` | 新建（uv 侧依赖声明，双轨中新增的一轨） |
+| `uv.lock` | 新生成（uv 侧锁文件；旧 `requirements.lock.txt` / `requirements-dev.lock.txt` 保留不动，但已不再反映当前 `.venv` 实况） |
+| `requirements*.txt` 四份 | 未动（用户选择保留） |
+| `.gitignore` | 未动（既有 `.venv/` 规则对 uv 环境同样生效；`uv.lock` 不在忽略之列，应纳入版本管理） |
+| `DEPENDENCIES.md` | 时间线总览追加 2026-09-28 行 + 本节 |
+
+### 迁移后验证（证据式验收）
+
+| 验证项 | 命令 | 结果 |
+|---|---|---|
+| 环境托管方 | `Get-Content .\.venv\pyvenv.cfg` | `uv = 0.12.8`，`version_info = 3.14.7` |
+| 六个直接依赖可导入 | `uv run python -c "import pydantic, fastapi, uvicorn, sqlalchemy, pymysql, alembic"` | `imports OK 2.0.52 0.141.1` |
+| 脚本冒烟 | `uv run python "todolist pydantic.py"` | 正常加载 tasks-pydantic.json 并显示菜单，管道无 stdin 时 `input()` 报 EOFError 退出（预期行为，非环境缺陷） |
+| dev 组 | `uv run pyright --version` | pyright 1.1.411 |
+| 旧调用路径兼容 | `.\.venv\Scripts\python.exe -c "import fastapi"`、`.\.venv\Scripts\pyright.exe --version` | 均正常（README/既有文档中的启动命令无需改写） |
+
+> 未验证项：`run_day15/16/17/19_demo.py` 等依赖 MySQL 的 demo 未跑（需本地数据库在线，与本次环境迁移无关；导入链已由上表第 2 行覆盖）。
+> 回退手段：四份 `requirements*.txt` 均在，可用 `python -m virtualenv .venv` + `pip install -r requirements.lock.txt -r requirements-dev.lock.txt -i 清华镜像` 回到迁移前状态；或删除 `pyproject.toml` + `uv.lock` 后重建。注意旧锁文件采集于 2026-09-18，回退后环境为彼时的 27 项。
+> 双轨维护约定：此后新增依赖应同时更新 `pyproject.toml`（跑 `uv sync` 刷新 `uv.lock`）与 `requirements*.txt`，或经用户确认后废弃双轨改为单轨。

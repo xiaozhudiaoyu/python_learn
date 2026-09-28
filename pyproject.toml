@@ -1,0 +1,34 @@
+# 项目依赖声明（uv 管理）
+# 2026-09-28 环境结构变更：由 virtualenv + pip 迁移为 uv 托管（.venv 由 uv sync 重建）。
+# 依赖版本照抄 requirements.txt（双轨并存：旧 requirements*.txt 保留不动，本文件为 uv 侧声明）。
+# 安装/同步：uv sync    运行：uv run python todolist.py
+
+[project]
+name = "python-learn"
+version = "0.1.0"
+description = "Python Web 全栈学习练习仓库（脚本集合，非打包项目）"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic==2.13.5",
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.4",
+    "SQLAlchemy==2.0.52",
+    "PyMySQL==1.2.0",
+    "alembic==1.20.0",
+]
+
+[dependency-groups]
+# 开发工具依赖（程序运行不需要），对应 requirements-dev.txt
+dev = [
+    "pyright==1.1.411",
+]
+
+[tool.uv]
+# 纯脚本练习仓库，不构建分发包
+package = false
+
+[[tool.uv.index]]
+# 本机默认 PyPI 源连不上（见 requirements.txt 注释），默认走清华镜像
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
