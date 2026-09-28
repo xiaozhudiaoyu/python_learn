@@ -1,6 +1,7 @@
 # 项目依赖声明（uv 管理）
 # 2026-09-28 环境结构变更：由 virtualenv + pip 迁移为 uv 托管（.venv 由 uv sync 重建）。
-# 依赖版本照抄 requirements.txt（双轨并存：旧 requirements*.txt 保留不动，本文件为 uv 侧声明）。
+# 依赖版本与原 requirements.txt 一致；2026-09-28 旧 requirements*.txt 四份已删除，
+# 本文件 + uv.lock 为唯一依赖声明（历史版本可经 git 回溯）。
 # 安装/同步：uv sync    运行：uv run python todolist.py
 
 [project]
@@ -18,7 +19,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-# 开发工具依赖（程序运行不需要），对应 requirements-dev.txt
+# 开发工具依赖（程序运行不需要），对应原 requirements-dev.txt（已删除）
 dev = [
     "pyright==1.1.411",
 ]
@@ -28,7 +29,7 @@ dev = [
 package = false
 
 [[tool.uv.index]]
-# 本机默认 PyPI 源连不上（见 requirements.txt 注释），默认走清华镜像
+# 本机默认 PyPI 源连不上（历史实测，原 requirements.txt 注释，文件已删除），默认走清华镜像
 name = "tuna"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true

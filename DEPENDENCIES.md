@@ -21,6 +21,7 @@
 | 2026-09-14 | 按规则 2.6 补齐声明缺口：`requirements.txt` 追加 `SQLAlchemy==2.0.52`、`PyMySQL==1.2.0` 两行；`requirements.lock.txt` 第 5 条注释同步；本文件第六节“待办：声明缺口”改为“声明缺口补齐记录” | 24（持平，仅声明层变更，未动 `.venv`） | `pip show SQLAlchemy PyMySQL` 实测输出（SQLAlchemy 2.0.52 / PyMySQL 1.2.0）；`requirements.lock.txt` 第 42/45 行；本文件第六节 `dist-info` 时间戳表格 |
 | 2026-09-18 09:25:32–09:25:33 | **第八批：Alembic 链（Day 18 迁移）**：`pip install alembic -i 清华镜像`，新增 alembic + Mako + MarkupSafe；同步写入 `requirements.txt`、`requirements.lock.txt` | 24 → **27** | `dist-info` 创建时间戳；`pip show alembic`（Requires: Mako, SQLAlchemy, typing-extensions）；`pip freeze --all` 实测 27 项；`pip check` 无断裂 |
 | 2026-09-28 10:08:01–10:08:05 | **环境结构变更：迁移至 uv 托管**：删除旧 `.venv`（virtualenv 20.38.0 + pip），新建 `pyproject.toml` 后 `uv sync` 重建环境并生成 `uv.lock`；旧 `requirements*.txt` 四份全部保留（双轨并存） | 27 → **26**（uv 重解析全部依赖，无 pip 自身及历史残留；详见第九节） | 新 `pyvenv.cfg` 的 `uv = 0.12.8` 行；`.venv`/`uv.lock` NTFS 创建时间戳；`uv sync` 安装清单输出 |
+| 2026-09-28 10:52–10:54（同日后续，文件修改时间实测） | **双轨改单轨：删除 pip 侧四份声明/锁文件**（`requirements.txt` / `requirements-dev.txt` / `requirements.lock.txt` / `requirements-dev.lock.txt`）；`pyproject.toml` + `uv.lock` 成为唯一依赖声明；同步改 README、dev.bat、pyproject.toml 注释中的引用 | 环境未动（仅声明层变更） | `git status` 四个 `D` 状态 + `Test-Path` 实测均 False；`git grep` 引用扫描（详见第九节补记） |
 
 ## 二、2026-09-07 新增批次（15 项，全部来自一次 `pip install pipdeptree`）
 
@@ -311,4 +312,25 @@ PyMySQL==1.2.0
 
 > 未验证项：`run_day15/16/17/19_demo.py` 等依赖 MySQL 的 demo 未跑（需本地数据库在线，与本次环境迁移无关；导入链已由上表第 2 行覆盖）。
 > 回退手段：四份 `requirements*.txt` 均在，可用 `python -m virtualenv .venv` + `pip install -r requirements.lock.txt -r requirements-dev.lock.txt -i 清华镜像` 回到迁移前状态；或删除 `pyproject.toml` + `uv.lock` 后重建。注意旧锁文件采集于 2026-09-18，回退后环境为彼时的 27 项。
-> 双轨维护约定：此后新增依赖应同时更新 `pyproject.toml`（跑 `uv sync` 刷新 `uv.lock`）与 `requirements*.txt`，或经用户确认后废弃双轨改为单轨。
+> 双轨维护约定：此后新增依赖应同时更新 `pyproject.toml`（跑 `uv sync` 刷新 `uv.lock`）与 `requirements*.txt`，或经用户确认后废弃双轨改为单轨。**→ 已于同日按用户指示废弃双轨，见下方补记。**
+
+### 补记（2026-09-28 同日）：双轨改单轨，删除 pip 侧四份文件
+
+用户指示「将 pip 那套移除」，即删除 `requirements.txt` / `requirements-dev.txt` / `requirements.lock.txt` / `requirements-dev.lock.txt`。
+
+**删除前证据链扫描（规则 3.1）**：`git grep` 全仓引用仅四处——README.md（安装命令）、dev.bat（报错提示文案）、pyproject.toml（注释）、DEPENDENCIES.md（历史台账，保留不动）；无任何 `.py` 代码、无反射/动态调用、无配置引用。四份文件均有 git 提交版本，可回退。
+
+**同步修改**：
+
+| 文件 | 变更 |
+|---|---|
+| `README.md` 第二节 | 安装步骤改为 `winget install astral-sh.uv` + `uv sync`，并注明旧文件已移除 |
+| `dev.bat` | 报错提示改为 pyproject.toml + uv sync 两步；因该文件为 GBK/UTF-8 混合编码，采用字节级替换（Latin1 载体）仅改 ASCII 目标串，GBK 字节原样保留（diff 仅 4 行变更已验证） |
+| `pyproject.toml` | 三处注释中「双轨并存/见 requirements.txt」表述改为「已删除，历史可经 git 回溯」 |
+| 本文件第一至八节 | 未动（历史台账保留对已删除文件的记述） |
+
+**删除后实测校验（规则 4.3）**：`Test-Path` 四份文件均返回 False；`git status` 显示四个 `D`；临时脚本 `_fix_devbat.ps1` 同样实测已删。
+
+**回退手段**：`git checkout <提交> -- requirements.txt requirements-dev.txt requirements.lock.txt requirements-dev.lock.txt` 可恢复四份文件（最后一次完整版本在提交 `e4e72c1` 及其父提交）；注意旧锁文件采集于 2026-09-18，恢复后不代表当前 `.venv` 实况。
+
+**单轨维护约定（取代上方双轨约定）**：此后新增/升级依赖只改 `pyproject.toml`，跑 `uv sync` 刷新 `uv.lock`，并按规则 2.5 在本台账补节。

@@ -15,10 +15,10 @@ echo.
 echo ´íÎó£ºÕÒ²»µ½ĞéÄâ»·¾³ Python
 echo é”™è¯¯ï¼šæ‰¾ä¸åˆ°è™šæ‹Ÿç¯å¢ƒ Python
 echo %PYTHON%
-echo ÇëÏÈÔÚÏîÄ¿¸ùÄ¿Â¼´´½¨ .venv ²¢°²×° requirements.txt ÖĞµÄÒÀÀµ£º
-echo è¯·å…ˆåœ¨é¡¹ç›®æ ¹ç›®å½•åˆ›å»º .venv å¹¶å®‰è£… requirements.txt ä¸­çš„ä¾èµ–ï¼š
-echo   1) python -m venv .venv
-echo   2) .venv\Scripts\python.exe -m pip install -r requirements.txt
+echo ÇëÏÈÔÚÏîÄ¿¸ùÄ¿Â¼´´½¨ .venv ²¢°²×° pyproject.toml ÖĞµÄÒÀÀµ£º
+echo è¯·å…ˆåœ¨é¡¹ç›®æ ¹ç›®å½•åˆ›å»º .venv å¹¶å®‰è£… pyproject.toml ä¸­çš„ä¾èµ–ï¼š
+echo   1) winget install astral-sh.uv
+echo   2) uv sync
 echo.
 pause
 exit /b 1

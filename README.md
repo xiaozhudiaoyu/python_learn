@@ -16,15 +16,14 @@
 ## 二、安装步骤
 
 ```powershell
-# 1. 创建虚拟环境
-python -m venv .venv
+# 1. 安装 uv（若尚未安装）
+winget install astral-sh.uv
 
-# 2. 安装运行时依赖（只有 pydantic 版本需要）
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 3. 安装开发工具：Pyright 静态类型检查（可选）
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+# 2. 创建 .venv 并安装全部依赖（含 dev 组的 Pyright，锁文件 uv.lock）
+uv sync
 ```
+
+> 依赖声明在 `pyproject.toml`，镜像源（清华）已在其中配置；旧的 `requirements*.txt` 已于 2026-09-28 移除。
 
 > 只用标准库的版本（`todolist.py`、dataclass 版、async 版、`todo_app` 包）无需安装依赖即可运行；
 > 仅 `todolist pydantic.py` 需要 `pydantic`。
