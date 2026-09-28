@@ -1,25 +1,73 @@
 # ------------------------------------------------------------
-# todo_api 单服务编排（2026-09-28 容器化方案产物）
+# todo_api + MySQL 双服务编排（2026-09-28 数据库容器化改造）
+#
+# 与旧版（应用连宿主机 MySQL）的区别：
+#   数据库也进容器，走 compose 内部网络，应用用服务名 mysql 作 DB_HOST，
+#   彻底摆脱「Docker 引擎在 WSL2 内时 host-gateway 指向 WSL 虚拟机、
+#   必须手填 Windows 虚拟网卡 IP 且重启漂移」的问题（2026-09-28 实测）。
 #
 # 启动前置条件（一次性）：
-#   1. 复制配置模板并填入真实口令（该文件已被 .gitignore 排除，不会入库）：
+#   1. 复制变量模板并填入真实口令（.env 已被 .gitignore/.dockerignore 排除）：
+#        Copy-Item .env.example .env
+#      MYSQL_DATABASE / MYSQL_USER / MYSQL_PASSWORD 须与
+#      day15_orm/db_config_local_container.py 的 DB_NAME / DB_USER / DB_PASSWORD 一致。
+#   2. 复制配置模板并填入口令（该文件已被 .gitignore 排除，不会入库）：
 #        Copy-Item day15_orm\db_config_local_container.example.py day15_orm\db_config_local_container.py
-#   2. 宿主机 MySQL 已运行、目标库表结构已就绪（应用启动不做 create_all，迁移走 alembic）。
+#      其中 DB_HOST 写 "mysql"、DB_PORT 写 3306（拓扑 C，见模板注释）。
+#   3. 首次启动 mysql 后导入宿主机现有数据（mysqldump 导出/导入命令见交付说明），
+#      或在库结构就绪后走 alembic upgrade head；应用启动不做 create_all。
 #
 # 启动：docker compose up -d --build
-# 验证：PowerShell 用 Invoke-RestMethod http://127.0.0.1:8000/
+#       （首次迁移数据时可先只起数据库：docker compose up -d mysql，导入后再 up 全栈）
+# 验证：docker compose ps 两个服务均 healthy；
+#       PowerShell 用 Invoke-RestMethod http://127.0.0.1:8000/
 #       WSL/bash 用   curl http://127.0.0.1:8000/
-# 停止：docker compose down          （不带 -v，本编排也没有卷）
+# 停止：docker compose down          （不带 -v，命名卷 mysql_data 保留数据）
 #
-# 注意：容器连宿主机 MySQL 的地址写在 db_config_local_container.py 的 DB_HOST 里：
-#       Docker Desktop 用 host.docker.internal；Docker 引擎在 WSL2 内时用 Windows 虚拟网卡 IP
-#       （host-gateway 此时指向 WSL 虚拟机而非 Windows，2026-09-28 实测）。
+# 注意：extra_hosts 的 host.docker.internal 对数据库已不再需要（走内部网络），
+#       保留是为将来容器访问宿主机其他服务时可用，无害。
 # ------------------------------------------------------------
 
 services:
+  mysql:
+    # 版本须 ≥ 宿主机 MySQL 版本，保证 mysqldump 导出文件可导入（导入前用 mysql --version 核对）
+    image: mysql:8.4
+    # 口令等敏感值全部来自项目根目录 .env（compose 自动读取并插值，不入库、不进镜像）；
+    # :? 语法表示变量缺失时直接报错拒绝启动，避免带着空口令把卷初始化坏
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请在 .env 中设置 MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?请在 .env 中设置 MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER:?请在 .env 中设置 MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请在 .env 中设置 MYSQL_PASSWORD}
+    command:
+      # 显式钉死 utf8mb4，与 db_config_local_container.py 的 DB_QUERY charset 保持一致
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    # 只绑本机回环 3307：与宿主机 MySQL 的 3306 并存互不冲突，
+    # 宿主机客户端可经 127.0.0.1:3307 直连排查；容器间通信不经此端口
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      # 命名卷持久化：docker compose down 不丢数据；
+      # 注意官方镜像只在【空卷首启】时用 MYSQL_* 变量初始化库和账号，
+      # 卷已存在后改 .env 不会生效，需先删卷（破坏性操作，单独确认）
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # 探测失败期间 todo-api 不会启动（见下方 depends_on）
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   todo-api:
     build: .
     image: todo-api:0.1
+    # 数据库 healthy 之后再启动应用，避免启动瞬间连不上库
+    depends_on:
+      mysql:
+        condition: service_healthy
     # 端口只绑本机回环，与 dev.bat「仅监听 127.0.0.1」的既有安全约定一致
     ports:
       - "127.0.0.1:8000:8000"
@@ -38,3 +86,6 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+
+volumes:
+  mysql_data:

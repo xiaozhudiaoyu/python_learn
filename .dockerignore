@@ -20,6 +20,9 @@ __pycache__/
 # ---- 本地数据库配置（含真实账号口令，绝不进镜像；规则 1.4）----
 day15_orm/db_config_local.py
 day15_orm/db_config_local_container.py
+# docker compose 变量文件（含容器 MySQL 口令）；.env.example 只有占位值，一并排除保持上下文干净
+.env
+.env.example
 
 # ---- 与 todo_api 运行无关的学习脚本 / 史料 / 文档 ----
 process/

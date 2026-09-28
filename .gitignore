@@ -26,6 +26,8 @@ day15_orm/db_config_local.py
 # 容器专用配置（含口令，仅本地存在，由 docker-compose 只读挂载注入容器）；
 # 只提交模板 day15_orm/db_config_local_container.example.py
 day15_orm/db_config_local_container.py
+# docker compose 变量文件（含容器 MySQL 口令，绝不提交）；只提交模板 .env.example
+.env
 
 # ---- 个人笔记与学习文档（本地保留，不提交）----
 # structure

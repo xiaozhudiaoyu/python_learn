@@ -52,6 +52,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-# 应用启动不会 create_all（见 todo_api/main.py 文档注释），表结构以宿主机 MySQL 现状为准，
+# 应用启动不会 create_all（见 todo_api/main.py 文档注释），表结构以容器 MySQL 现状为准
+# （2026-09-28 起数据库同在 docker-compose 编排内，数据来自宿主机 dump 导入），
 # 建表/改表一律走 Alembic 迁移，镜像启动命令里不做任何 DDL。
 CMD ["uvicorn", "todo_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
