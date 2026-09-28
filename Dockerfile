@@ -18,7 +18,8 @@
 FROM python:3.14-slim
 
 # 从官方镜像取 uv 二进制（astral-sh 官方文档推荐的镜像内安装方式）
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+# COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.m.daocloud.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -36,9 +37,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --no-install-project
 
 # ---- 第二层：代码（改代码只重建这一层）----
-# day15_orm：数据库层（todo_api.db 依赖它）；day18_alembic + alembic.ini：
-# 带进镜像是为了将来可在容器内手工执行 alembic upgrade head，本次不自动运行。
+# 跨包依赖链（已用 grep 穷举 todo_api 的全部 day* 导入）：
+#   todo_api → day15_orm（db.py / service.py）、day16_crud（service.py 的 dao）
+#   day16_crud → day15_orm
+# day18_alembic + alembic.ini：带进镜像是为了将来可在容器内手工执行 alembic upgrade head，本次不自动运行。
 COPY day15_orm/ ./day15_orm/
+COPY day16_crud/ ./day16_crud/
 COPY todo_api/ ./todo_api/
 COPY alembic.ini ./
 COPY day18_alembic/ ./day18_alembic/

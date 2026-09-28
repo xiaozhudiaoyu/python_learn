@@ -1,9 +1,12 @@
 # 【模板】容器专用数据库连接配置（todo_api 容器化用）。
 #
-# 与 db_config_local_example.py 的唯一区别：DB_HOST 固定为 "host.docker.internal"。
-# 原因：容器内的 127.0.0.1 指向容器自身，连不到宿主机 MySQL；
-#       host.docker.internal 是 Docker 提供的宿主机别名（compose 里已通过
-#       extra_hosts: host-gateway 显式打通，Windows Docker Desktop 原生支持）。
+# 与 db_config_local_example.py 的唯一区别：DB_HOST 的取值按 Docker 拓扑二选一（2026-09-28 实测）：
+#   拓扑 A：Docker Desktop（Windows 侧）→ 写 "host.docker.internal"（compose 的
+#           extra_hosts: host-gateway 在 Windows 引擎下指向 Windows 宿主）；
+#   拓扑 B：Docker Engine 装在 WSL2 内（本项目当前实况）→ host-gateway 指向的是
+#           **WSL 虚拟机自己**（其上无 3306，容器会报 Connection refused），
+#           必须改写 Windows 虚拟网卡 IP（与 WSL 侧 db_config_local.py 的 DB_HOST 同值，
+#           如 172.19.80.1；WSL 重启后该 IP 可能变化，以 ipconfig 实测为准）。
 #
 # 用法：复制本文件为同目录的 db_config_local_container.py，填入真实账号口令：
 #
@@ -17,7 +20,7 @@
 # 若连接报 ERROR 1130 (Host ... is not allowed to connect)，需要为该账号补一条
 # 放行 Docker 网段的授权（语句由人工审核后在 MySQL 客户端执行，勿交给工具静默执行）。
 
-# 宿主机别名，容器内固定写这个值，不要改回 127.0.0.1
+# 宿主机地址：拓扑 A 写 "host.docker.internal"；拓扑 B（Docker 引擎在 WSL2 内）写 Windows 虚拟网卡 IP
 DB_HOST: str = "host.docker.internal"
 
 # MySQL 端口，默认 3306

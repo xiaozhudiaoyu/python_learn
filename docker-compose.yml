@@ -7,11 +7,13 @@
 #   2. 宿主机 MySQL 已运行、目标库表结构已就绪（应用启动不做 create_all，迁移走 alembic）。
 #
 # 启动：docker compose up -d --build
-# 验证：Invoke-RestMethod http://127.0.0.1:8000/
+# 验证：PowerShell 用 Invoke-RestMethod http://127.0.0.1:8000/
+#       WSL/bash 用   curl http://127.0.0.1:8000/
 # 停止：docker compose down          （不带 -v，本编排也没有卷）
 #
-# 注意：容器内访问宿主机 MySQL 走 host.docker.internal，
-#       MySQL 账号的 host 授权须放行 Docker 网段（若报 1130，参见交付说明）。
+# 注意：容器连宿主机 MySQL 的地址写在 db_config_local_container.py 的 DB_HOST 里：
+#       Docker Desktop 用 host.docker.internal；Docker 引擎在 WSL2 内时用 Windows 虚拟网卡 IP
+#       （host-gateway 此时指向 WSL 虚拟机而非 Windows，2026-09-28 实测）。
 # ------------------------------------------------------------
 
 services:

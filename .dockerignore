@@ -26,7 +26,6 @@ process/
 guide_file/
 sqlalchemy_learn/
 todo_app/
-day16_crud/
 day17_relationship/
 run_*.py
 hello.py
