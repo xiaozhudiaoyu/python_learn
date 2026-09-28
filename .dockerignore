@@ -1,0 +1,42 @@
+# ------------------------------------------------------------
+# docker build 上下文排除清单（与 .gitignore 是两套独立机制，不能互相替代）
+# 原则：镜像里只要「跑 todo_api 必需的东西」，其余一律不进构建上下文。
+# ------------------------------------------------------------
+
+# ---- 版本管理 / 编辑器 / 系统杂项 ----
+.git/
+.gitignore
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# ---- 虚拟环境与字节码（镜像内由 uv sync 重建，宿主机的绝不能用）----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# ---- 本地数据库配置（含真实账号口令，绝不进镜像；规则 1.4）----
+day15_orm/db_config_local.py
+day15_orm/db_config_local_container.py
+
+# ---- 与 todo_api 运行无关的学习脚本 / 史料 / 文档 ----
+process/
+guide_file/
+sqlalchemy_learn/
+todo_app/
+day16_crud/
+day17_relationship/
+run_*.py
+hello.py
+todolist*.py
+dev.bat
+*.docx
+*.md
+tasks*.json
+
+# ---- 容器化产物自身（镜像内用不到）----
+Dockerfile
+docker-compose.yml
+.dockerignore

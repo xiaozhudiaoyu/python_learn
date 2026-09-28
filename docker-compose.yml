@@ -1,0 +1,38 @@
+# ------------------------------------------------------------
+# todo_api 单服务编排（2026-09-28 容器化方案产物）
+#
+# 启动前置条件（一次性）：
+#   1. 复制配置模板并填入真实口令（该文件已被 .gitignore 排除，不会入库）：
+#        Copy-Item day15_orm\db_config_local_container.example.py day15_orm\db_config_local_container.py
+#   2. 宿主机 MySQL 已运行、目标库表结构已就绪（应用启动不做 create_all，迁移走 alembic）。
+#
+# 启动：docker compose up -d --build
+# 验证：Invoke-RestMethod http://127.0.0.1:8000/
+# 停止：docker compose down          （不带 -v，本编排也没有卷）
+#
+# 注意：容器内访问宿主机 MySQL 走 host.docker.internal，
+#       MySQL 账号的 host 授权须放行 Docker 网段（若报 1130，参见交付说明）。
+# ------------------------------------------------------------
+
+services:
+  todo-api:
+    build: .
+    image: todo-api:0.1
+    # 端口只绑本机回环，与 dev.bat「仅监听 127.0.0.1」的既有安全约定一致
+    ports:
+      - "127.0.0.1:8000:8000"
+    # Linux 引擎下显式打通 host.docker.internal → 宿主机网关；
+    # Docker Desktop（Windows/WSL2 后端）自带该解析，多写无害。
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # 单文件只读挂载：把容器专用配置顶替到镜像内 db_config_local.py 的位置。
+      # 只读（:ro）—— 容器内代码没有理由写配置文件；口令也不落进镜像层。
+      - ./day15_orm/db_config_local_container.py:/app/day15_orm/db_config_local.py:ro
+    healthcheck:
+      # python:3.14-slim 镜像里没有 curl，用标准库 urllib 探根路径（todo_api.main 的 GET /）
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
