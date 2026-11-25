@@ -52,6 +52,7 @@ services:
       # 注意官方镜像只在【空卷首启】时用 MYSQL_* 变量初始化库和账号，
       # 卷已存在后改 .env 不会生效，需先删卷（破坏性操作，单独确认）
       - mysql_data:/var/lib/mysql
+      # - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       # 探测失败期间 todo-api 不会启动（见下方 depends_on）
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
